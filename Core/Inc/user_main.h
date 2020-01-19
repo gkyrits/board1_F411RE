@@ -25,4 +25,8 @@ extern int fatfs_list_files(char* path, cli_print_t print);
 extern const char* get_fatfs_error(int err);
 extern int get_fatfs_info(uint32_t *total_sect, uint32_t *free_sect, char *name);
 
+extern void test_onewire(void);
+extern int get_temperature(float *temp);
+
+
 #endif /* INC_USER_MAIN_H_ */

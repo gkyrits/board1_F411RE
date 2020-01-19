@@ -26,6 +26,10 @@ void set_datetime(U32 epoch);
 
 void get_datetime_struct(date_time_t* date_time);
 char* get_datetime_string(void);
+char* get_date_string(void);
+char* get_time_string(void);
+
+
 U32 get_datetime_epoch(void);
 char* get_epoch_string(date_time_t* date_time);
 

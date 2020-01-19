@@ -285,8 +285,10 @@ static void lcd_backlit_cmd(void){
 
 //----------------------------------------------------------------------------------
 extern uint8_t ow_sn[8],ow_data[9];
-extern void test_onewire(void);
 static void ow_scan_cmd(void){
+	int ret;
+	float temp;
+
 	test_onewire();
 	cli_print(CRLN "Serial: ");
 	for(int ii=0; ii<8; ii++)
@@ -294,6 +296,13 @@ static void ow_scan_cmd(void){
 	cli_print(CRLN "Data: ");
 	for(int ii=0; ii<9; ii++)
 		cli_printf("%X,",ow_data[ii]);
+
+	ret=get_temperature(&temp);
+	if(ret!=0)
+		cli_print(CRLN"error read temperature");
+	else
+		cli_printf(CRLN "Temperature: %.1f",temp);
+
 	cli_print(CRLN);
 }
 

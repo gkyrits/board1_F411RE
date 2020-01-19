@@ -13,6 +13,7 @@
 
 #include "user_main.h"
 #include "onewire.h"
+#include "ds1820.h"
 #include "LCD.h"
 #include "fatfs.h"
 
@@ -26,6 +27,24 @@ uint8_t ow_sn[8],ow_data[9];
 static char workbuff[512];
 
 extern void cli_printf(const char *frm, ...);
+
+//-------------------------------------------------------------------------
+int get_temperature(float *temp){
+	float value;
+	int ret;
+	if(TM_DS1820_Is(ow_sn)){
+		ret=TM_DS1820_ParseData(ow_data,&value);
+		if(ret!=_OK)
+			return ret;
+		printf("Temperature: %f\n",temp);
+		*temp=value;
+	}
+	else
+		return _ERR;
+	return _OK;
+}
+
+//-------------------------------------------------------------------------
 void test_onewire(void){
 	//uint8_t data[9];
 	uint8_t ow_stat,crc;
@@ -271,6 +290,37 @@ int fatfs_read_file(const char *name ,cli_print_t print){
 	return ret;
 }
 
+//-------------------------------------------------------------------------
+void LCD_update_time(COLOR col){
+	char *date;
+	date = get_time_string();
+	LCD_DisplayString(5,100,date,&Font20,col,GREEN);
+}
+
+//-------------------------------------------------------------------------
+void LCD_info(void){
+	int ret;
+	float temp;
+	char temp_str[5];
+	char *date_buf;
+	//get temper
+	test_onewire();
+	ret=get_temperature(&temp);
+	if(ret==_OK)
+		sprintf(temp_str,"%04.1f",temp);
+	else
+		sprintf(temp_str,"--.-");
+	//draw screen
+	LCD_DisplayString(5,5,"Temperature",&Font12,LCD_BACKGROUND,YELLOW);
+	LCD_DisplayString(5,20,temp_str,&Font24,LCD_BACKGROUND,RED);
+	LCD_DisplayString(5,45,"Date",&Font12,LCD_BACKGROUND,YELLOW);
+	date_buf = get_date_string();
+	LCD_DisplayString(5,60,date_buf,&Font20,LCD_BACKGROUND,GREEN);
+	LCD_DisplayString(5,80,"Time",&Font12,LCD_BACKGROUND,YELLOW);
+	date_buf = get_time_string();
+	LCD_DisplayString(5,100,date_buf,&Font20,BLUE,GREEN);
+}
+
 
 //-------------------------------------------------------------------------
 int fatfs_list_files(char* path, cli_print_t print){
@@ -315,20 +365,27 @@ void main_init(void){
 
 void main_loop(void){
 	HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	HAL_Delay(200);
+	HAL_Delay(100);
 	cnt++;
 
-	if(cnt==20){
+	if(cnt==10){
+		LCD_update_time(BLUE);
 		LCD_DisplayImage(0,0,&Image1);
+		LCD_info();
 	}
-	else if(cnt==40){
+	else if(cnt==100){
+		LCD_update_time(BLUE);
 		LCD_DisplayImage(0,0,&Image2);
+		LCD_info();
 	}
-	else if(cnt==60){
-		LCD_Clear(WHITE);
-		LCD_Show();
+	else if(cnt==200){
+		LCD_Clear(BLUE);
+		LCD_info();
 	}
-	if(cnt>80)
+	else if(!(cnt%10)){
+		LCD_update_time(BLUE);
+	}
+	if(cnt>400)
 		cnt=0;
 
 	if(command_req)

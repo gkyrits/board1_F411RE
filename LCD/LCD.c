@@ -749,7 +749,7 @@ void LCD_Show(void)
 		LCD_DisplayString(35,20,"STM32F411 Test",&Font12,LCD_BACKGROUND,BLUE);
 		LCD_DisplayString(35,35,"1.8inch TFTLCD",&Font12,RED,GRED);
 
-		printf("LCD Display Nummber \r\n");
+		printf("LCD Display Number \r\n");
 		LCD_DisplayNum(35,50,1234567890,&Font12,LCD_BACKGROUND,BLUE);
 
 	}

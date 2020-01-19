@@ -138,6 +138,48 @@ char* get_datetime_string(void){
 }
 
 //-----------------------------------------------------------
+char* get_date_string(void){
+	RTC_DateTypeDef sDate;
+
+	sprintf(datetime_buff,"--/-/-");
+
+	if(!date_init){
+		return datetime_buff;
+	}
+
+	 if (HAL_RTC_GetDate(&hrtc,&sDate,RTC_FORMAT_BIN) != HAL_OK){
+		 printf("fail read date!");
+		 return datetime_buff;
+	 }
+
+	 sprintf(datetime_buff,"20%d/%d/%d",sDate.Year,sDate.Month,sDate.Date);
+	 return datetime_buff;
+}
+
+//-----------------------------------------------------------
+char* get_time_string(void){
+	RTC_DateTypeDef sDate;
+	RTC_TimeTypeDef sTime;
+
+	sprintf(datetime_buff,"-.-.-");
+
+	if(!date_init){
+		return datetime_buff;
+	}
+
+	if (HAL_RTC_GetTime(&hrtc,&sTime,RTC_FORMAT_BIN) != HAL_OK){
+		 return datetime_buff;
+	 }
+
+	 sprintf(datetime_buff,"%2d:%2d:%2d",sTime.Hours,sTime.Minutes,sTime.Seconds);
+
+	 if (HAL_RTC_GetDate(&hrtc,&sDate,RTC_FORMAT_BIN) != HAL_OK)
+		 printf("Error getDate\n");
+
+	 return datetime_buff;
+}
+
+//-----------------------------------------------------------
 U32 get_datetime_epoch(void){
 	RTC_TimeTypeDef sTime;
 	RTC_DateTypeDef sDate;
