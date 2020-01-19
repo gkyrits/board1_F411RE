@@ -14,6 +14,9 @@
 #include "malloc.h"
 #include "datetime.h"
 #include "user_main.h"
+#include "sdcard.h"
+#include "beeper.h"
+#include "test_temp.h"
 
 #define CRLN 	"\r\n"
 #define PROMPT 	"cmd>"
@@ -212,7 +215,7 @@ static void get_backup_cmd(void){
 
 //----------------------------------------------------------------------------------
 static void beep_cmd(void){
-	int freq,time=500,div;
+	int freq,time=500;
 	if(argc<2)
 		goto help;
 
@@ -224,12 +227,7 @@ static void beep_cmd(void){
 	if(time>10000)
 		time=10000;
 	cli_printf(CRLN "beep %dHz %dms ...",freq,time);
-	div= 1000000 / freq;
-	htim10.Init.Prescaler=div;
-	HAL_TIM_Base_Init(&htim10);
-	HAL_TIM_PWM_Start(&htim10,TIM_CHANNEL_1);
-	HAL_Delay(time);
-	HAL_TIM_PWM_Stop(&htim10,TIM_CHANNEL_1);
+	beep(freq,time);
 	cli_print(CRLN PROMPT);
 
 	return;
@@ -239,23 +237,7 @@ static void beep_cmd(void){
 
 //----------------------------------------------------------------------------------
 static void beep_demo_cmd(void){
-	int div;
-	HAL_TIM_PWM_Start(&htim10,TIM_CHANNEL_1);
-	//up...
-	for(int ii=100; ii<=10000; ii=ii+100){
-		div= 1000000 / ii;
-		htim10.Init.Prescaler=div;
-		HAL_TIM_Base_Init(&htim10);
-		HAL_Delay(100);
-	}
-	//down...
-	for(int ii=10000; ii>=100; ii=ii-100){
-		div= 1000000 / ii;
-		htim10.Init.Prescaler=div;
-		HAL_TIM_Base_Init(&htim10);
-		HAL_Delay(100);
-	}
-	HAL_TIM_PWM_Stop(&htim10,TIM_CHANNEL_1);
+	play_beeper_demo();
 	cli_print(CRLN PROMPT);
 }
 

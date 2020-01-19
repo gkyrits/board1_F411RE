@@ -153,7 +153,7 @@ void LCD_DrawCircle ( POINT X_Center, POINT Y_Center, LENGTH Radius, COLOR Color
 void LCD_DisplayChar( POINT Xstart, POINT Ystart, const char Acsii_Char, sFONT* Font, COLOR Color_Background, COLOR Color_Foreground );
 void LCD_DisplayString (POINT Xstart, POINT Ystart, const char * pString, sFONT* Font, COLOR Color_Background, COLOR Color_Foreground );
 void LCD_DisplayNum(POINT Xpoint, POINT Ypoint, int32_t Nummber, sFONT* Font, COLOR Color_Background, COLOR Color_Foreground );
-void LCD_Show(void);
+void LCD_Demo(void);
 
 //----------------------------------------------------------------------------
 //Images

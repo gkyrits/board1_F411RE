@@ -14,19 +14,7 @@ extern void main_loop(void);
 extern void button1_irq(void);
 extern void button2_irq(void);
 
-typedef void (*cli_print_t)(const char *frm, ...);
-
-extern int fatfs_mount(int enable);
-extern int fatfs_format(const char* name);
-extern int fatfs_add_file(const char *name ,int lines);
-extern int fatfs_read_file(const char *name ,cli_print_t print);
-extern int fatfs_list_files(char* path, cli_print_t print);
-
-extern const char* get_fatfs_error(int err);
-extern int get_fatfs_info(uint32_t *total_sect, uint32_t *free_sect, char *name);
-
-extern void test_onewire(void);
-extern int get_temperature(float *temp);
+extern void beep(uint16_t freq, uint16_t timems);
 
 
 #endif /* INC_USER_MAIN_H_ */
