@@ -17,14 +17,14 @@ void play_beeper_demo(void){
 		div= 1000000 / ii;
 		htim10.Init.Prescaler=div;
 		HAL_TIM_Base_Init(&htim10);
-		HAL_Delay(100);
+		HAL_Delay(50);
 	}
 	//down...
 	for(int ii=10000; ii>=100; ii=ii-100){
 		div= 1000000 / ii;
 		htim10.Init.Prescaler=div;
 		HAL_TIM_Base_Init(&htim10);
-		HAL_Delay(100);
+		HAL_Delay(50);
 	}
 	HAL_TIM_PWM_Stop(&htim10,TIM_CHANNEL_1);
 }
