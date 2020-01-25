@@ -15,16 +15,22 @@
 #include "LCD.h"
 #include "test_temp.h"
 #include "menu.h"
+#include "fatfs_utils.h"
 
 #include "user_main.h"
 
 static int but1_req=0,but2_req=0;
 
-int menu_on=0;
-int menu_id;
+static int menu_on=0;
+static int menu_id;
+
+#define IMG_TMOUT	20
+int play_mode=PLYMOD_INF;
+int internal_img=0;
+static int play_mode_old=-1;
 
 #define MENU_TIMEOUT 10
-int mnu_tmout_cnt=0;
+static int mnu_tmout_cnt=0;
 
 //-------------------------------------------------------------------------
 // TEMP-DATE-TIME SCREEN
@@ -36,7 +42,7 @@ static void LCD_update_time(COLOR col){
 }
 
 //-------------------------------------------------------------------------
-static void LCD_main_screen(void){
+static void LCD_info_screen(void){
 	int ret;
 	float temp;
 	char temp_str[5];
@@ -60,17 +66,47 @@ static void LCD_main_screen(void){
 }
 
 //-------------------------------------------------------------------------
+// IMAGE SCREEN
+//-------------------------------------------------------------------------
+static void LCD_image_screen(void){
+	static int idx=0;
+	int err;
+	if(internal_img==0){
+		err=LCD_load_next_image();
+		if(err!=NO_ERR){
+			internal_img=1;
+		}
+	}
+	if(internal_img==1){
+		if(idx==0)
+			LCD_DisplayImage(0,0,&Image1);
+		else if(idx==1)
+			LCD_DisplayImage(0,0,&Image2);
+		idx++;
+		if(idx>1)
+			idx=0;
+	}
+}
+
+//-------------------------------------------------------------------------
 //MENUS
 //-------------------------------------------------------------------------
 #define MENU1			0
 
-#define MNU1_TEST_BEEP	1
-#define MNU1_EXIT		2
+#define MNU1_SLIDE_SD		0
+#define MNU1_SLIDE_SD_INF	1
+#define MNU1_SLIDE_INT_INF	2
+#define MNU1_SLIDE_OFF		3
+#define MNU1_TEST_BEEP		4
+#define MNU1_EXIT			5
 
 //-------------------------------------------------------------------------
 static void create_menu1(){
 	menu_id=MENU1;
-	add_mnu_option(menu_id,"Item1");
+	add_mnu_option(menu_id,"Slide sd");
+	add_mnu_option(menu_id,"Slide sd/info");
+	add_mnu_option(menu_id,"Slide int/info");
+	add_mnu_option(menu_id,"Slide off");
 	add_mnu_option(menu_id,"Beeper Test");
 	add_mnu_option(menu_id,"Exit");
 	set_mnu_item(menu_id,0);
@@ -86,9 +122,32 @@ static void menu_exit(void){
 
 //-------------------------------------------------------------------------
 static void menu_action(int mnu_id, int item_id){
+	int err;
 	switch(mnu_id){
 	case MENU1:
 		switch(item_id){
+		case MNU1_SLIDE_SD:
+			play_mode = PLYMOD_IMG;
+			internal_img = 0;
+			read_image_list(&err);
+			menu_exit();
+			break;
+		case MNU1_SLIDE_SD_INF:
+			play_mode = PLYMOD_IMG_INF;
+			internal_img = 0;
+			read_image_list(&err);
+			menu_exit();
+			break;
+		case MNU1_SLIDE_INT_INF:
+			play_mode = PLYMOD_IMG_INF;
+			internal_img = 1;
+			menu_exit();
+			break;
+		case MNU1_SLIDE_OFF:
+			play_mode = PLYMOD_INF;
+			internal_img = 0;
+			menu_exit();
+			break;
 		case MNU1_EXIT:
 			menu_exit();
 			break;
@@ -142,34 +201,48 @@ static void button_select(void){
 //ONE_SEC
 //-------------------------------------------------------------------------
 static void one_sec_time_event(void){
-	static int sec_cnt=0;
+	static uint8_t sec_cnt=0;
 
 	if(menu_on){
 		menu_one_sec();
 		sec_cnt=0;
+		play_mode_old=-1;
 		return;
 	}
 
-	LCD_update_time(BLUE);
 
-	if(sec_cnt==0){
-		LCD_Clear(BLUE);
-		LCD_main_screen();
+	if(play_mode_old!=play_mode){
+		if(play_mode==PLYMOD_INF){
+			LCD_Clear(BLUE);
+			LCD_info_screen();
+		}
+		if(play_mode==PLYMOD_IMG){
+			LCD_image_screen();
+		}
+		if(play_mode==PLYMOD_IMG_INF){
+			LCD_image_screen();
+			LCD_info_screen();
+		}
+		play_mode_old=play_mode;
 	}
 
-	if(sec_cnt==10){
-		LCD_DisplayImage(0,0,&Image1);
-		LCD_main_screen();
+	//every IMG_TMOUT sec
+	if((sec_cnt%IMG_TMOUT==0) && (sec_cnt>0)){
+		if(play_mode==PLYMOD_INF){
+			LCD_Clear(BLUE);
+		}
+		if((play_mode==PLYMOD_IMG) || (play_mode==PLYMOD_IMG_INF)){
+			LCD_image_screen();
+		}
+		if((play_mode==PLYMOD_INF) || (play_mode==PLYMOD_IMG_INF)){
+			LCD_info_screen();
+		}
 	}
-
-	if(sec_cnt==20){
-		LCD_DisplayImage(0,0,&Image2);
-		LCD_main_screen();
-	}
-
-	if(sec_cnt==30){
-		sec_cnt=0;
-		return;
+	else{
+	//every sec
+		if((play_mode==PLYMOD_INF) || (play_mode==PLYMOD_IMG_INF)){
+			LCD_update_time(BLUE);
+		}
 	}
 
 	sec_cnt++;

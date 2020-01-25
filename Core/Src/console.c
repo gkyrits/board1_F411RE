@@ -4,6 +4,7 @@
  *  Created on: 24/12/2019
  *      Author: George
  */
+#include <fatfs_utils.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -14,7 +15,6 @@
 #include "malloc.h"
 #include "datetime.h"
 #include "user_main.h"
-#include "sdcard.h"
 #include "beeper.h"
 #include "test_temp.h"
 
@@ -39,6 +39,7 @@
 #define FSADDFILE_CMD   "fs_addfile"
 #define FSSHOWFILE_CMD  "fs_showfile"
 #define FSLIST_CMD      "fs_list"
+#define PLAY_IMG_CMD    "slide_show"
 
 #define HELP_CMD_DSCR    	"(command descriptions)"
 #define MEM_CMD_DSCR	 	"(show memory)"
@@ -58,6 +59,8 @@
 #define FSADDFILE_CMD_DSCR   "(fs_addfile)"
 #define FSSHOWFILE_CMD_DSCR  "(fs_showfile)"
 #define FSLIST_CMD_DSCR      "(fs_list)"
+
+#define PLAY_IMG_CMD_DSCR    "[on/on_info/off] ([int]) (Play Slide Show)"
 
 
 #define BUFF_LEN  160
@@ -115,8 +118,8 @@ static void help_cmd(void){
 	cli_printf(CRLN "%10s %s", FSADDFILE_CMD, FSADDFILE_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", FSSHOWFILE_CMD,FSSHOWFILE_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", FSLIST_CMD, FSLIST_CMD_DSCR);
+	cli_printf(CRLN "%10s %s", PLAY_IMG_CMD, PLAY_IMG_CMD_DSCR);
 	//...
-
 	cli_print(CRLN);
 }
 
@@ -397,6 +400,58 @@ static void fslist_cmd(void){
 		cli_printf(CRLN "error: %s",get_fatfs_error(ret));
 	else
 		cli_printf(CRLN"...ok!");
+	cli_print(CRLN);
+}
+
+
+//----------------------------------------------------------------------------------
+static void play_images_cmd(void){
+	int err,num;
+
+	if(argc<2)
+		goto help;
+
+	if(!strcmp(argv[1],"on"))
+		play_mode    = PLYMOD_IMG;
+	else if(!strcmp(argv[1],"on_info"))
+		play_mode    = PLYMOD_IMG_INF;
+	else if(!strcmp(argv[1],"off"))
+		play_mode    = PLYMOD_INF;
+	else
+		goto help;
+
+	if(play_mode == PLYMOD_INF){
+		cli_printf(CRLN "slide show disabled");
+		cli_print(CRLN);
+		return;
+	}
+
+	internal_img = 0;
+	if(argc>2){
+		if(!strcmp(argv[2],"int"))
+			internal_img=1;
+	}
+
+	if(internal_img){
+		cli_printf(CRLN "read internal images");
+		cli_print(CRLN);
+		return;
+	}
+
+	num=read_image_list(&err);
+	if(err!=NO_ERR){
+		cli_printf(CRLN "error: %s",read_image_error(err));
+		return;
+	}
+	cli_printf(CRLN "read %d images",num);
+	if(num>0)
+		internal_img=0;
+	cli_print(CRLN);
+	return;
+
+	help:
+	cli_printf(CRLN  PLAY_IMG_CMD " " PLAY_IMG_CMD_DSCR);
+	cli_print(CRLN);
 }
 
 //----------------------------------------------------------------------------------
@@ -453,6 +508,8 @@ void parse_cmd(void){
 			fsshowfile_cmd();
 		else if(!strcmp(argv[0],FSLIST_CMD))
 			fslist_cmd();
+		else if(!strcmp(argv[0],PLAY_IMG_CMD))
+			play_images_cmd();
 		//....
 		else
 			cli_print(CRLN "Unknown Command ?");

@@ -19,6 +19,6 @@ int get_mnu_item(int mnu_id);
 
 void show_menu(int mnu_id, uint16_t col);
 
-int show_info(char *text, uint16_t col);
+void show_info(char *text, uint16_t col);
 
 #endif /* INC_MENU_H_ */

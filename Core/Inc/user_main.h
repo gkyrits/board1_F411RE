@@ -16,5 +16,12 @@ extern void button2_irq(void);
 
 extern void beep(uint16_t freq, uint16_t timems);
 
+#define PLYMOD_INF 		0
+#define PLYMOD_IMG 		1
+#define PLYMOD_IMG_INF 	2
+extern int play_mode;
+extern int internal_img;
+
+
 
 #endif /* INC_USER_MAIN_H_ */

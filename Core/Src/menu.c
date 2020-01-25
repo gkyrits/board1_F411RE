@@ -86,13 +86,14 @@ int get_mnu_item(int mnu_id){
 }
 
 //-------------------------------------------------------------------------
-int show_info(char *text, COLOR col){
-	int x,y,ys;
+void show_info(char *text, COLOR col){
+	int x,y,ys,xm;
 	//estimate x,y;
 	x=20;
 	y=35;
 	ys=16;
-	LCD_DrawRectangle(x,y,x+120,y+(ys*3)-1,col,DRAW_FULL,1);
+	xm = LCD_WIDTH-(x*2);
+	LCD_DrawRectangle(x,y,x+xm,y+(ys*3)-1,col,DRAW_FULL,1);
 	LCD_DisplayString(x,y+ys,text,&Font16,LCD_BACKGROUND,WHITE);
 }
 
@@ -101,7 +102,7 @@ int show_info(char *text, COLOR col){
 void show_menu(int mnu_id, COLOR col){
 	MENU_ITEM *elem;
 	int elem_num=0,elem_id,max_elem_len=0,elem_len;
-	int x,y,ys;
+	int x,y,ys,xm;
 
 	if(mnu_id>MENU_NUM)
 		return;
@@ -120,19 +121,19 @@ void show_menu(int mnu_id, COLOR col){
 	//estimate x,y;
 	x=20;
 	y=10;
-	ys=16;
-	//...
+	ys=12;
+	xm = LCD_WIDTH-(x*2);
 	//show items
 	elem_id=0;
 	elem = menu[mnu_id].items;
 	while(elem){
 		if(elem_id==menu[mnu_id].item_idx){
-			LCD_DrawRectangle(x,y,x+120,y+ys-1,WHITE,DRAW_FULL,1);
-			LCD_DisplayString(x,y,elem->descr,&Font16,LCD_BACKGROUND,col);
+			LCD_DrawRectangle(x,y,x+xm,y+ys-1,WHITE,DRAW_FULL,1);
+			LCD_DisplayString(x,y,elem->descr,&Font12,LCD_BACKGROUND,col);
 		}
 		else{
-			LCD_DrawRectangle(x,y,x+120,y+ys-1,col,DRAW_FULL,1);
-			LCD_DisplayString(x,y,elem->descr,&Font16,LCD_BACKGROUND,WHITE);
+			LCD_DrawRectangle(x,y,x+xm,y+ys-1,col,DRAW_FULL,1);
+			LCD_DisplayString(x,y,elem->descr,&Font12,LCD_BACKGROUND,WHITE);
 		}
 		elem=elem->next;
 		elem_id++;
