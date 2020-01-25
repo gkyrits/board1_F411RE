@@ -4,12 +4,21 @@
  *  Created on: 19 Ιαν 2020
  *      Author: George
  */
+#include <fatfs_utils.h>
 #include "stdio.h"
 #include "string.h"
 #include "fatfs.h"
-#include "sdcard.h"
+#include "libjpeg.h"
 
 static char workbuff[512];
+
+#define MAX_IMAGES	   100
+#define PATH_NAME_SIZE 30
+typedef char IMAGE_LIST[MAX_IMAGES][PATH_NAME_SIZE];
+static  IMAGE_LIST *image_list=0;
+static int  img_num=0;
+static int  img_idx=0;
+
 
 extern void cli_printf(const char *frm, ...);
 
@@ -229,4 +238,128 @@ int fatfs_list_files(char* path, cli_print_t print){
     return res;
 }
 
+//-------------------------------------------------------------------------
+static int fatfs_list_path_images(char* path, cli_print_t print, int add_list){
+    FRESULT fr;     /* Return value */
+    DIR dj;         /* Directory search object */
+    FILINFO fno;    /* File information */
+    char fullname[PATH_NAME_SIZE];
+
+    fr = f_findfirst(&dj, &fno, path, "*.jpg");  /* Start to search for photo files */
+
+    while (fr == FR_OK && fno.fname[0]) {         /* Repeat while an item is found */
+    	snprintf(fullname,PATH_NAME_SIZE,"%s/%s",path, fno.fname);
+    	if(print)
+    		print("%s\n\r",fullname);                /* Display the object name */
+    	if(add_list && image_list){
+    		if(img_num==MAX_IMAGES)
+    			break;
+    		strncpy((*image_list)[img_num],fullname,PATH_NAME_SIZE);
+    		img_num++;
+    	}
+        fr = f_findnext(&dj, &fno);               /* Search for next item */
+    }
+
+    f_closedir(&dj);
+    return fr;
+}
+
+
+//-------------------------------------------------------------------------
+int fatfs_list_images(cli_print_t print, int add_list){
+    FRESULT res;
+    DIR dir;
+    FILINFO fno;
+
+    //scan root dir
+    fatfs_list_path_images("",print,add_list);
+
+    //scan subdirs
+    res = f_opendir(&dir, "");
+    if (res == FR_OK) {
+        for (;;) {
+            res = f_readdir(&dir, &fno);                   /* Read a directory item */
+            if (res != FR_OK || fno.fname[0] == 0) break;  /* Break on error or end of dir */
+            if (fno.fattrib & AM_DIR) {                    /* It is a directory */
+            	fatfs_list_path_images(fno.fname,print,add_list);
+            }
+        }
+        f_closedir(&dir);
+    }
+
+    return res;
+}
+
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+char* read_image_error(int err){
+	switch(err){
+	case NO_ERR: return "No Error";
+	case ERR_FS_MOUNT: return "Fail mount SD";
+	case ERR_MEMORY: return "Fail get mem";
+	case ERR_FS_READ: return "Fail read SD";
+	case ERR_NO_IMGS: return "No images";
+	}
+	return "Uknown Error";
+}
+
+//-------------------------------------------------------------------------
+int read_image_list(int *err){
+	int ret;
+
+	*err=NO_ERR;
+	img_idx=0;
+	img_num=0;
+	fatfs_mount(0);
+	if(image_list)
+		free(image_list);
+
+	ret=fatfs_mount(1);
+	if(ret){
+		//play_mode=MODE_NULL;
+		printf("%s() fail mount SD\n",__FUNCTION__);
+		*err=ERR_FS_MOUNT;
+		return 0;
+	}
+
+	if(!image_list)
+		image_list=malloc(sizeof(IMAGE_LIST));
+	if(!image_list){
+		//play_mode=MODE_NULL;
+		printf("%s() fail get mem\n",__FUNCTION__);
+		*err=ERR_MEMORY;
+		return 0;
+	}
+
+	ret=fatfs_list_images(0,1);
+	if(ret){
+		//play_mode=MODE_NULL;
+		printf("%s() fail read SD\n",__FUNCTION__);
+		free(image_list);
+		image_list=0;
+		*err=ERR_FS_READ;
+		return 0;
+	}
+
+	//play_mode=MODE_FS_IMAGE;
+	printf("%s() read %d images!\n",__FUNCTION__,img_num);
+	return img_num;
+}
+
+//-------------------------------------------------------------------------
+int LCD_load_next_image(void){
+	int ret;
+
+	if(!image_list)
+		return ERR_NO_IMGS;
+
+	if(img_idx>=img_num)
+		img_idx=0;
+	ret=load_image((*image_list)[img_idx]);
+	if(ret)
+		return ERR_FS_READ;
+	img_idx++;
+
+	return NO_ERR;
+}
 

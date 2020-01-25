@@ -5,8 +5,10 @@
  *      Author: George
  */
 
-#ifndef INC_SDCARD_H_
-#define INC_SDCARD_H_
+#ifndef INC_FATFS_UTILS_H_
+#define INC_FATFS_UTILS_H_
+
+#include <stdint.h>
 
 typedef void (*cli_print_t)(const char *frm, ...);
 
@@ -19,5 +21,16 @@ extern int fatfs_list_files(char* path, cli_print_t print);
 extern const char* get_fatfs_error(int err);
 extern int get_fatfs_info(uint32_t *total_sect, uint32_t *free_sect, char *name);
 
+//-------------------------------------------------------------------------
+#define NO_ERR			  0
+#define ERR_FS_MOUNT 	  1
+#define ERR_MEMORY 		  2
+#define ERR_FS_READ       3
+#define ERR_NO_IMGS		  4
 
-#endif /* INC_SDCARD_H_ */
+extern char* read_image_error(int err);
+extern int read_image_list(int *err);
+extern int LCD_load_next_image(void);
+
+
+#endif /* INC_FATFS_UTILS_H_ */
