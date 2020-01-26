@@ -52,7 +52,7 @@
 #define SET_TIME_CMD_DSCR   "[hour] [min] [sec] (set_time)"
 #define EPOCH_CMD_DSCR	 	"(show epoch-time)"
 #define SET_EPOCH_CMD_DSCR	"[epoch(hex)] (set epoch-time)"
-#define SET_ALARM_CMD_DSCR  "[...] (set_alarm)"
+#define SET_ALARM_CMD_DSCR  "[alrm:1/2] [date] [hour] [min] [sec] (set_alarm)"
 #define ALARM_CMD_DSCR   	"(get alarms info)"
 #define BACKUP_CMD_DSCR	   	"[text]	(save a backup text)"
 #define GET_BACKUP_CMD_DSCR "(read the backup text)"
@@ -231,15 +231,38 @@ static void set_epoch_cmd(void){
 
 //----------------------------------------------------------------------------------
 static void set_alarm_cmd(void){
-	//U32 epoch = get_datetime_epoch();
-	//cli_printf(CRLN "epoch:%X",epoch);
+	int ret,alrm_id;
+
+	if(argc<6)
+		goto help;
+
+	alrm_id=atoi(argv[1]);
+	if((alrm_id<1) || (alrm_id>2))
+		goto help;
+
+	ret=set_alarm_args(alrm_id,argv[2],argv[3],argv[4],argv[5]);
+	if(ret==_OK)
+		cli_print(CRLN "ok!");
+	else
+		cli_print(CRLN "fail set alarm");
 	cli_print(CRLN PROMPT);
+
+	return;
+	help:
+	cli_print(CRLN SET_ALARM_CMD " " SET_ALARM_CMD_DSCR);
 }
 
 //----------------------------------------------------------------------------------
 static void get_alarms_cmd(void){
-	//U32 epoch = get_datetime_epoch();
-	//cli_printf(CRLN "epoch:%X",epoch);
+	char alrm1[30],alrm2[30];
+	int ret;
+	ret=get_alarms(alrm1,alrm2);
+	if(ret==_OK){
+		cli_printf(CRLN "alrm1: %s",alrm1);
+		cli_printf(CRLN "alrm2: %s",alrm2);
+	}
+	else
+		cli_printf(CRLN "fail get alarms");
 	cli_print(CRLN PROMPT);
 }
 

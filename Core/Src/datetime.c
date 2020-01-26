@@ -18,11 +18,11 @@ typedef union{
 	U32  buf32[BACKUP_REGS];
 }BACK_UP;
 
-
 static BACK_UP backup;
 
 static char datetime_buff[30]="-";
 static BOOL date_init=FALSE;
+
 
 #define EPOCH_2000	946684800
 
@@ -78,12 +78,25 @@ void epoch_to_date_time(date_time_t* date_time,U32 epoch)
 }
 
 //-----------------------------------------------------------
+static void enable_alarms(void){
+	RTC_AlarmTypeDef sAlarm;
+
+	if(HAL_RTC_GetAlarm(&hrtc,&sAlarm,RTC_ALARM_A,RTC_FORMAT_BIN)==HAL_OK){
+		HAL_RTC_SetAlarm_IT(&hrtc,&sAlarm,RTC_FORMAT_BIN);
+	}
+	if(HAL_RTC_GetAlarm(&hrtc,&sAlarm,RTC_ALARM_B,RTC_FORMAT_BIN)==HAL_OK){
+		HAL_RTC_SetAlarm_IT(&hrtc,&sAlarm,RTC_FORMAT_BIN);
+	}
+}
+
+//-----------------------------------------------------------
 void init_datetime(void){
 	RTC_TimeTypeDef sTime;
 	RTC_DateTypeDef sDate;
 
 	 if (HAL_RTC_GetDate(&hrtc,&sDate,RTC_FORMAT_BIN) == HAL_OK){
 		if(sDate.Year!=0){
+			enable_alarms();
 			date_init=TRUE;
 			return;
 		}
@@ -334,12 +347,89 @@ void set_datetime(U32 epoch){
 
 
 //-----------------------------------------------------------
-int set_alarm(void){
-	RTC_AlarmTypeDef alarm;
+int set_alarm_args(int alrm, char *date, char *hour, char *min, char *sec){
+	RTC_AlarmTypeDef sAlarm = {0};
 
-	//HAL_RTC_SetAlarm(&hrtc,);
+	sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+	sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+	sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
+	sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+	sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+
+	if(alrm==1)
+		sAlarm.Alarm=RTC_ALARM_A;
+	else if(alrm==2)
+		sAlarm.Alarm=RTC_ALARM_B;
+	else
+		return _ERR;
+
+	if(!strcmp("-",date))
+		sAlarm.AlarmMask |= RTC_ALARMMASK_DATEWEEKDAY;
+	else
+		sAlarm.AlarmDateWeekDay = atoi(date);
+
+	if(!strcmp("-",hour))
+		sAlarm.AlarmMask |= RTC_ALARMMASK_HOURS;
+	else
+		sAlarm.AlarmTime.Hours= atoi(hour);
+
+	if(!strcmp("-",min))
+		sAlarm.AlarmMask |= RTC_ALARMMASK_MINUTES;
+	else
+		sAlarm.AlarmTime.Minutes= atoi(min);
+
+	if(!strcmp("-",sec))
+		sAlarm.AlarmMask |= RTC_ALARMMASK_SECONDS;
+	else
+		sAlarm.AlarmTime.Seconds=atoi(sec);
+
+	if(HAL_RTC_SetAlarm_IT(&hrtc,&sAlarm,RTC_FORMAT_BIN)!=HAL_OK)
+		return _ERR;
+
+	return _OK;
 }
 
+//-----------------------------------------------------------
+static void parse_alarm(RTC_AlarmTypeDef *sAlarm, char *alrm_buff){
+	char date[3],hour[3],min[3],sec[3];
+
+	if(sAlarm->AlarmMask & RTC_ALARMMASK_DATEWEEKDAY)
+		sprintf(date,"--");
+	else
+		sprintf(date,"%02d",sAlarm->AlarmDateWeekDay);
+	if(sAlarm->AlarmMask & RTC_ALARMMASK_HOURS)
+		sprintf(hour,"--");
+	else
+		sprintf(hour,"%02d",sAlarm->AlarmTime.Hours);
+	if(sAlarm->AlarmMask & RTC_ALARMMASK_MINUTES)
+		sprintf(min,"--");
+	else
+		sprintf(min,"%02d",sAlarm->AlarmTime.Minutes);
+	if(sAlarm->AlarmMask & RTC_ALARMMASK_SECONDS)
+		sprintf(sec,"--");
+	else
+		sprintf(sec,"%02d",sAlarm->AlarmTime.Seconds);
+
+	sprintf(alrm_buff,"[%s] %s:%s:%s",date,hour,min,sec);
+}
+
+//-----------------------------------------------------------
+int get_alarms(char *alrm1, char *alrm2){
+	RTC_AlarmTypeDef sAlarm1,sAlarm2;
+
+	if(HAL_RTC_GetAlarm(&hrtc,&sAlarm1,RTC_ALARM_A,RTC_FORMAT_BIN)!=HAL_OK){
+		printf("fail get alarm1!");
+		return _ERR;
+	}
+	if(HAL_RTC_GetAlarm(&hrtc,&sAlarm2,RTC_ALARM_B,RTC_FORMAT_BIN)!=HAL_OK){
+		printf("fail get alarm2!");
+		return _ERR;
+	}
+
+	parse_alarm(&sAlarm1,alrm1);
+	parse_alarm(&sAlarm2,alrm2);
+	return _OK;
+}
 
 //-----------------------------------------------------------
 void write_backup_str(char *data){
@@ -355,4 +445,5 @@ char *read_backup_str(void){
 	backup.buf8[sizeof(BACK_UP)-1]=0;
 	return backup.buf8;
 }
+
 

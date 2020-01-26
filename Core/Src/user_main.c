@@ -21,6 +21,9 @@
 
 static int but1_req=0,but2_req=0;
 
+int alarm1_req=0;
+int alarm2_req=0;
+
 static int menu_on=0;
 static int menu_id;
 
@@ -267,6 +270,19 @@ void main_loop(void){
 	static int cnt = 0;
 	HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 	HAL_Delay(100);
+
+	if(alarm1_req){
+		beep(5000,50);
+		alarm1_req=0;
+	}
+	if(alarm2_req){
+		beep(4000,50);
+		HAL_Delay(50);
+		beep(4000,50);
+		HAL_Delay(50);
+		beep(4000,50);
+		alarm2_req=0;
+	}
 
 	if(command_req)
 		parse_cmd();

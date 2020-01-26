@@ -22,6 +22,8 @@ extern void beep(uint16_t freq, uint16_t timems);
 extern int play_mode;
 extern int internal_img;
 
+extern int alarm1_req,alarm2_req;
+
 
 
 #endif /* INC_USER_MAIN_H_ */

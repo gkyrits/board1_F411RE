@@ -33,7 +33,8 @@ char* get_time_string(void);
 int set_time_args(char *hour, char *min, char *sec);
 int set_date_args(char *day, char *date, char *month, char *year);
 
-
+int set_alarm_args(int alrm, char *date, char *hour, char *min, char *sec);
+int get_alarms(char *alrm1, char *alrm2);
 
 U32 get_datetime_epoch(void);
 char* get_epoch_string(date_time_t* date_time);

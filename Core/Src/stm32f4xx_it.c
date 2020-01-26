@@ -59,6 +59,7 @@ extern void check_memory(void);
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern RTC_HandleTypeDef hrtc;
 extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
@@ -249,6 +250,23 @@ void USART2_IRQHandler(void)
 		  console_rx_char(ch);
   }
   /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles RTC alarms A and B interrupt through EXTI line 17.
+  */
+void RTC_Alarm_IRQHandler(void)
+{
+  /* USER CODE BEGIN RTC_Alarm_IRQn 0 */
+	  if(__HAL_RTC_ALARM_GET_IT(&hrtc,RTC_IT_ALRA))
+		  alarm1_req=1;
+	  if(__HAL_RTC_ALARM_GET_IT(&hrtc,RTC_IT_ALRB))
+		  alarm2_req=1;
+  /* USER CODE END RTC_Alarm_IRQn 0 */
+  HAL_RTC_AlarmIRQHandler(&hrtc);
+  /* USER CODE BEGIN RTC_Alarm_IRQn 1 */
+
+  /* USER CODE END RTC_Alarm_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
