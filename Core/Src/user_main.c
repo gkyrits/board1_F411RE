@@ -38,7 +38,7 @@ static int mnu_tmout_cnt=0;
 static void LCD_update_time(COLOR col){
 	char *date;
 	date = get_time_string();
-	LCD_DisplayString(5,100,date,&Font20,col,GREEN);
+	LCD_DisplayString(5,95,date,&Font20,col,GREEN);
 }
 
 //-------------------------------------------------------------------------
@@ -58,11 +58,13 @@ static void LCD_info_screen(void){
 	LCD_DisplayString(5,5,"Temperature",&Font12,LCD_BACKGROUND,YELLOW);
 	LCD_DisplayString(5,20,temp_str,&Font24,LCD_BACKGROUND,RED);
 	LCD_DisplayString(5,45,"Date",&Font12,LCD_BACKGROUND,YELLOW);
+	date_buf = get_day_string();
+	LCD_DisplayString(50,45,date_buf,&Font12,LCD_BACKGROUND,WHITE);
 	date_buf = get_date_string();
 	LCD_DisplayString(5,60,date_buf,&Font20,LCD_BACKGROUND,GREEN);
 	LCD_DisplayString(5,80,"Time",&Font12,LCD_BACKGROUND,YELLOW);
 	date_buf = get_time_string();
-	LCD_DisplayString(5,100,date_buf,&Font20,BLUE,GREEN);
+	LCD_DisplayString(5,95,date_buf,&Font20,BLUE,GREEN);
 }
 
 //-------------------------------------------------------------------------

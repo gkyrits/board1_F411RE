@@ -8,6 +8,7 @@
 #include "stm32f4xx_hal.h"
 #include "datetime.h"
 #include "stdio.h"
+#include "stdlib.h"
 #include "string.h"
 #include "main.h"
 
@@ -141,7 +142,7 @@ char* get_datetime_string(void){
 char* get_date_string(void){
 	RTC_DateTypeDef sDate;
 
-	sprintf(datetime_buff,"--/-/-");
+	sprintf(datetime_buff,"-/-/--");
 
 	if(!date_init){
 		return datetime_buff;
@@ -152,9 +153,39 @@ char* get_date_string(void){
 		 return datetime_buff;
 	 }
 
-	 sprintf(datetime_buff,"20%d/%d/%d",sDate.Year,sDate.Month,sDate.Date);
+
+	 sprintf(datetime_buff,"%d/%d/20%d",sDate.Date,sDate.Month,sDate.Year);
 	 return datetime_buff;
 }
+
+//-----------------------------------------------------------
+char* get_day_string(void){
+	RTC_DateTypeDef sDate;
+
+	sprintf(datetime_buff,"-----");
+
+	if(!date_init){
+		return datetime_buff;
+	}
+
+	 if (HAL_RTC_GetDate(&hrtc,&sDate,RTC_FORMAT_BIN) != HAL_OK){
+		 printf("fail read date!");
+		 return datetime_buff;
+	 }
+
+	 switch(sDate.WeekDay){
+	 case RTC_WEEKDAY_MONDAY:   return "Monday";
+	 case RTC_WEEKDAY_TUESDAY:  return "Tuesday";
+	 case RTC_WEEKDAY_WEDNESDAY:return "Wednesday";
+	 case RTC_WEEKDAY_THURSDAY: return "Thursday";
+	 case RTC_WEEKDAY_FRIDAY:   return "Friday";
+	 case RTC_WEEKDAY_SATURDAY: return "Saturday";
+	 case RTC_WEEKDAY_SUNDAY:   return "Sunday";
+	 }
+
+	 return datetime_buff;
+}
+
 
 //-----------------------------------------------------------
 char* get_time_string(void){
@@ -177,6 +208,71 @@ char* get_time_string(void){
 		 printf("Error getDate\n");
 
 	 return datetime_buff;
+}
+
+
+//-----------------------------------------------------------
+int set_time_args(char *hour, char *min, char *sec){
+	RTC_TimeTypeDef sTime;
+	int value;
+
+	memset(&sTime,0,sizeof(RTC_TimeTypeDef));
+	value=atoi(hour);
+	if((value<0) || (value>23))
+		return _ERR;
+	sTime.Hours=value;
+
+	value=atoi(min);
+	if((value<0) || (value>59))
+		return _ERR;
+	sTime.Minutes=value;
+
+	value=atoi(sec);
+	if((value<0) || (value>59))
+		return _ERR;
+	sTime.Seconds=value;
+
+	if (HAL_RTC_SetTime(&hrtc,&sTime,RTC_FORMAT_BIN) != HAL_OK){
+		printf("fail set time!\n");
+		return _ERR;
+ 	}
+
+	return _OK;
+}
+
+
+//-----------------------------------------------------------
+int set_date_args(char *day, char *date, char *month, char *year){
+	RTC_DateTypeDef sDate;
+	int value;
+
+	memset(&sDate,0,sizeof(RTC_DateTypeDef));
+	value=atoi(day);
+	if((value<1) || (value>7))
+		return _ERR;
+	sDate.WeekDay=value;
+
+	value=atoi(date);
+	if((value<1) || (value>31))
+		return _ERR;
+	sDate.Date=value;
+
+	value=atoi(month);
+	if((value<1) || (value>12))
+		return _ERR;
+	sDate.Month=value;
+
+	value=atoi(year);
+	if((value<0) || (value>99))
+		return _ERR;
+	sDate.Year=value;
+
+	if (HAL_RTC_SetDate(&hrtc,&sDate,RTC_FORMAT_BIN) != HAL_OK){
+		printf("fail set date!");
+		return _ERR;
+	}
+
+	return _OK;
 }
 
 //-----------------------------------------------------------
@@ -235,6 +331,15 @@ void set_datetime(U32 epoch){
  	}
 
 }
+
+
+//-----------------------------------------------------------
+int set_alarm(void){
+	RTC_AlarmTypeDef alarm;
+
+	//HAL_RTC_SetAlarm(&hrtc,);
+}
+
 
 //-----------------------------------------------------------
 void write_backup_str(char *data){

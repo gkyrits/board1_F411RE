@@ -6,6 +6,7 @@
  */
 
 #include "stdio.h"
+#include "string.h"
 #include "main.h"
 
 #include "onewire.h"
@@ -22,7 +23,6 @@ int get_temperature(float *temp){
 		ret=TM_DS1820_ParseData(ow_data,&value);
 		if(ret!=_OK)
 			return ret;
-		printf("Temperature: %f\n",temp);
 		*temp=value;
 	}
 	else

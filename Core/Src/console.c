@@ -21,12 +21,16 @@
 #define CRLN 	"\r\n"
 #define PROMPT 	"cmd>"
 
-#define HELP_CMD       "help"
-#define MEM_CMD	       "memory"
-#define DATE_CMD	   "get_date"
-#define TIME_CMD	   "get_time"
-#define EPOCH_CMD	   "get_epoch"
-#define SET_EPOCH_CMD  "set_epoch"
+#define HELP_CMD        "help"
+#define MEM_CMD	        "memory"
+#define DATE_CMD	    "get_date"
+#define TIME_CMD	    "get_time"
+#define SET_DATE_CMD    "set_date"
+#define SET_TIME_CMD    "set_time"
+#define EPOCH_CMD	    "get_epoch"
+#define SET_EPOCH_CMD   "set_epoch"
+#define SET_ALARM_CMD   "set_alarm"
+#define ALARM_CMD   	"get_alarm"
 #define BACKUP_CMD	    "backup"
 #define GET_BACKUP_CMD  "get_backup"
 #define BEEP_CMD        "beep"
@@ -44,9 +48,13 @@
 #define HELP_CMD_DSCR    	"(command descriptions)"
 #define MEM_CMD_DSCR	 	"(show memory)"
 #define DATE_CMD_DSCR	 	"(show date-time)"
+#define SET_DATE_CMD_DSCR   "[day] [date] [month] [year] (set_date)"
+#define SET_TIME_CMD_DSCR   "[hour] [min] [sec] (set_time)"
 #define EPOCH_CMD_DSCR	 	"(show epoch-time)"
-#define SET_EPOCH_CMD_DSCR	"[epoch(hex)] 	(set epoch-time)"
-#define BACKUP_CMD_DSCR	   	"[text] 		(save a backup text)"
+#define SET_EPOCH_CMD_DSCR	"[epoch(hex)] (set epoch-time)"
+#define SET_ALARM_CMD_DSCR  "[...] (set_alarm)"
+#define ALARM_CMD_DSCR   	"(get alarms info)"
+#define BACKUP_CMD_DSCR	   	"[text]	(save a backup text)"
 #define GET_BACKUP_CMD_DSCR "(read the backup text)"
 #define BEEP_CMD_DSCR       "[freq(Hz)] [time(ms)] (freq tone)"
 #define BEEP_DEMO_CMD_DSCR  "(beep demo 100Hz-10000Hz / 100ms)"
@@ -104,8 +112,12 @@ static void help_cmd(void){
 	cli_printf(CRLN "%10s %s", MEM_CMD, MEM_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", DATE_CMD, DATE_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", TIME_CMD, DATE_CMD_DSCR);
+	cli_printf(CRLN "%10s %s", SET_DATE_CMD, SET_DATE_CMD_DSCR);
+	cli_printf(CRLN "%10s %s", SET_TIME_CMD, SET_TIME_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", EPOCH_CMD, EPOCH_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", SET_EPOCH_CMD, SET_EPOCH_CMD_DSCR);
+	cli_printf(CRLN "%10s %s", SET_ALARM_CMD, SET_ALARM_CMD_DSCR);
+	cli_printf(CRLN "%10s %s", ALARM_CMD, ALARM_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", BACKUP_CMD, BACKUP_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", GET_BACKUP_CMD, GET_BACKUP_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", BEEP_CMD, BEEP_CMD_DSCR);
@@ -156,6 +168,44 @@ static void date_cmd(void){
 }
 
 //----------------------------------------------------------------------------------
+static void set_date_cmd(void){
+	int ret;
+
+	if(argc<5)
+		goto help;
+
+	ret=set_date_args(argv[1],argv[2],argv[3],argv[4]);
+	if(ret==_OK)
+		cli_print(CRLN "ok!");
+	else
+		cli_print(CRLN "fail set date");
+	cli_print(CRLN PROMPT);
+
+	return;
+	help:
+	cli_print(CRLN SET_DATE_CMD " " SET_DATE_CMD_DSCR);
+}
+
+//----------------------------------------------------------------------------------
+static void set_time_cmd(void){
+	int ret;
+
+	if(argc<4)
+		goto help;
+
+	ret=set_time_args(argv[1],argv[2],argv[3]);
+	if(ret==_OK)
+		cli_print(CRLN "ok!");
+	else
+		cli_print(CRLN "fail set time");
+	cli_print(CRLN PROMPT);
+
+	return;
+	help:
+	cli_print(CRLN SET_TIME_CMD " " SET_TIME_CMD_DSCR);
+}
+
+//----------------------------------------------------------------------------------
 static void epoch_cmd(void){
 	U32 epoch = get_datetime_epoch();
 	cli_printf(CRLN "epoch:%X",epoch);
@@ -177,6 +227,20 @@ static void set_epoch_cmd(void){
 	return;
 	help:
 	cli_print(CRLN SET_EPOCH_CMD " " SET_EPOCH_CMD_DSCR);
+}
+
+//----------------------------------------------------------------------------------
+static void set_alarm_cmd(void){
+	//U32 epoch = get_datetime_epoch();
+	//cli_printf(CRLN "epoch:%X",epoch);
+	cli_print(CRLN PROMPT);
+}
+
+//----------------------------------------------------------------------------------
+static void get_alarms_cmd(void){
+	//U32 epoch = get_datetime_epoch();
+	//cli_printf(CRLN "epoch:%X",epoch);
+	cli_print(CRLN PROMPT);
 }
 
 //----------------------------------------------------------------------------------
@@ -480,10 +544,18 @@ void parse_cmd(void){
 			date_cmd();
 		else if(!strcmp(argv[0],TIME_CMD))
 			date_cmd();
+		else if(!strcmp(argv[0],SET_DATE_CMD))
+			set_date_cmd();
+		else if(!strcmp(argv[0],SET_TIME_CMD))
+			set_time_cmd();
 		else if(!strcmp(argv[0],EPOCH_CMD))
 			epoch_cmd();
 		else if(!strcmp(argv[0],SET_EPOCH_CMD))
 			set_epoch_cmd();
+		else if(!strcmp(argv[0],SET_ALARM_CMD))
+			set_alarm_cmd();
+		else if(!strcmp(argv[0],ALARM_CMD))
+			get_alarms_cmd();
 		else if(!strcmp(argv[0],BACKUP_CMD))
 			backup_cmd();
 		else if(!strcmp(argv[0],GET_BACKUP_CMD))
