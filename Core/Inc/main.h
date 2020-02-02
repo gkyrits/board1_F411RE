@@ -60,15 +60,15 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void SystemClock_Config(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 #define BUT1_Pin GPIO_PIN_0
 #define BUT1_GPIO_Port GPIOH
 #define BUT1_EXTI_IRQn EXTI0_IRQn
-#define LED1_Pin GPIO_PIN_1
-#define LED1_GPIO_Port GPIOH
+#define LED_GREEN_Pin GPIO_PIN_1
+#define LED_GREEN_GPIO_Port GPIOH
 #define SD_CS_Pin GPIO_PIN_0
 #define SD_CS_GPIO_Port GPIOC
 #define BUT2_Pin GPIO_PIN_1
@@ -82,6 +82,14 @@ void Error_Handler(void);
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3
 #define USART_RX_GPIO_Port GPIOA
+#define BAT_CN_Pin GPIO_PIN_4
+#define BAT_CN_GPIO_Port GPIOC
+#define SPI4_CS1_Pin GPIO_PIN_0
+#define SPI4_CS1_GPIO_Port GPIOB
+#define SPI4_CS2_Pin GPIO_PIN_1
+#define SPI4_CS2_GPIO_Port GPIOB
+#define LED_RED_Pin GPIO_PIN_2
+#define LED_RED_GPIO_Port GPIOB
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14

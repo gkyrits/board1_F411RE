@@ -35,6 +35,17 @@ static void LCD_Reset(void){
 	Driver_Delay_ms(100);
 }
 
+void LCD_Sleep(int enable){
+	LCD_DC_0;
+	LCD_CS_0;
+	if(enable)
+		SPI_Write_Byte(0x10);
+	else
+		SPI_Write_Byte(0x11);
+	LCD_CS_1;
+}
+
+
 /*******************************************************************************
 function:
 		Write register address and data

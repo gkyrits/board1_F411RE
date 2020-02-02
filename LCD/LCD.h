@@ -135,6 +135,8 @@ function:
 void LCD_Init( LCD_SCAN_DIR Lcd_ScanDir );
 void LCD_SetGramScanWay(LCD_SCAN_DIR Scan_dir);
 
+void LCD_Sleep(int enable);
+
 //LCD set cursor + windows + color
 void LCD_SetWindows( POINT Xstart, POINT Ystart, POINT Xend, POINT Yend );
 void LCD_SetCursor ( POINT Xpoint, POINT Ypoint );

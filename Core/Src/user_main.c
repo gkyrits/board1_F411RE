@@ -24,6 +24,8 @@ static int but1_req=0,but2_req=0;
 int alarm1_req=0;
 int alarm2_req=0;
 
+int power_mode=PWRMOD_NORM;
+
 static int menu_on=0;
 static int menu_id;
 
@@ -51,12 +53,20 @@ static void LCD_info_screen(void){
 	char temp_str[5];
 	char *date_buf;
 	//get temper
-	test_onewire();
-	ret=get_temperature(&temp);
+	if(power_mode==PWRMOD_NORM)
+		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_SET);
+	for(int ii=0; ii<3; ii++){
+		test_onewire();
+		ret=get_temperature(&temp);
+		if(ret==_OK)
+			break;
+	}
 	if(ret==_OK)
 		sprintf(temp_str,"%04.1f",temp);
 	else
 		sprintf(temp_str,"--.-");
+	if(power_mode==PWRMOD_NORM)
+		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_RESET);
 	//draw screen
 	LCD_DisplayString(5,5,"Temperature",&Font12,LCD_BACKGROUND,YELLOW);
 	LCD_DisplayString(5,20,temp_str,&Font24,LCD_BACKGROUND,RED);
@@ -268,7 +278,8 @@ void main_init(void){
 
 void main_loop(void){
 	static int cnt = 0;
-	HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	if(power_mode==PWRMOD_NORM)
+		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
 	HAL_Delay(100);
 
 	if(alarm1_req){

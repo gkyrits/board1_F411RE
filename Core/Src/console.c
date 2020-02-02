@@ -44,6 +44,8 @@
 #define FSSHOWFILE_CMD  "fs_showfile"
 #define FSLIST_CMD      "fs_list"
 #define PLAY_IMG_CMD    "slide_show"
+#define SET_POWER_CMD   "set_power"
+
 
 #define HELP_CMD_DSCR    	"(command descriptions)"
 #define MEM_CMD_DSCR	 	"(show memory)"
@@ -69,6 +71,7 @@
 #define FSLIST_CMD_DSCR      "(fs_list)"
 
 #define PLAY_IMG_CMD_DSCR    "[on/on_info/off] ([int]) (Play Slide Show)"
+#define SET_POWER_CMD_DSCR   "[norm/low/stop]  (set_power)"
 
 
 #define BUFF_LEN  160
@@ -131,6 +134,7 @@ static void help_cmd(void){
 	cli_printf(CRLN "%10s %s", FSSHOWFILE_CMD,FSSHOWFILE_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", FSLIST_CMD, FSLIST_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", PLAY_IMG_CMD, PLAY_IMG_CMD_DSCR);
+	cli_printf(CRLN "%10s %s", SET_POWER_CMD, SET_POWER_CMD_DSCR);
 	//...
 	cli_print(CRLN);
 }
@@ -332,6 +336,18 @@ static void beep_demo_cmd(void){
 }
 
 //----------------------------------------------------------------------------------
+static void set_LCD_backlight(int value){
+	TIM_OC_InitTypeDef sConfig = {0};
+	sConfig.OCMode = TIM_OCMODE_PWM1;
+	sConfig.Pulse = value;
+	sConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
+	sConfig.OCFastMode = TIM_OCFAST_DISABLE;
+	HAL_TIM_PWM_ConfigChannel(&htim11, &sConfig, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim11,TIM_CHANNEL_1);
+}
+
+
+//----------------------------------------------------------------------------------
 static void lcd_backlit_cmd(void){
 	int val;
 	if(argc<2)
@@ -341,13 +357,7 @@ static void lcd_backlit_cmd(void){
 	if(val>=100)
 		val=101;
 	cli_printf(CRLN "LCD Backlight :%d",val);
-	TIM_OC_InitTypeDef sConfig = {0};
-	sConfig.OCMode = TIM_OCMODE_PWM1;
-	sConfig.Pulse = val;
-	sConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
-	sConfig.OCFastMode = TIM_OCFAST_DISABLE;
-	HAL_TIM_PWM_ConfigChannel(&htim11, &sConfig, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim11,TIM_CHANNEL_1);
+	set_LCD_backlight(val);
 	cli_print(CRLN PROMPT);
 
 	return;
@@ -542,6 +552,50 @@ static void play_images_cmd(void){
 }
 
 //----------------------------------------------------------------------------------
+static void set_power_cmd(void){
+
+	if(argc<2)
+		goto help;
+
+	if(!strcmp(argv[1],"norm")){
+		set_LCD_backlight(101);
+		power_mode=PWRMOD_NORM;
+	}
+	else if(!strcmp(argv[1],"low")){
+		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
+		set_LCD_backlight(10);
+		power_mode=PWRMOD_LOW;
+	}
+	else if(!strcmp(argv[1],"stop")){
+		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
+		set_LCD_backlight(0);
+		//HAL_GPIO_WritePin(LCD_RST_Pin_Port, LCD_RST_Pin,GPIO_PIN_RESET);
+		//power_mode=PWRMOD_STOP;
+		HAL_PWREx_EnableFlashPowerDown();
+		LCD_Sleep(1);
+		HAL_Delay(100);
+		HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON,PWR_STOPENTRY_WFI);
+		SystemClock_Config();
+		HAL_PWREx_DisableFlashPowerDown();
+		LCD_Sleep(0);
+		if(power_mode==PWRMOD_LOW)
+			set_LCD_backlight(10);
+		else
+			set_LCD_backlight(101);
+	}
+	else
+		goto help;
+
+	cli_print(CRLN "ok!");
+	cli_print(CRLN);
+	return;
+
+	help:
+	cli_printf(CRLN SET_POWER_CMD " " SET_POWER_CMD_DSCR);
+	cli_print(CRLN);
+}
+
+//----------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------
 
@@ -605,6 +659,8 @@ void parse_cmd(void){
 			fslist_cmd();
 		else if(!strcmp(argv[0],PLAY_IMG_CMD))
 			play_images_cmd();
+		else if(!strcmp(argv[0],SET_POWER_CMD))
+			set_power_cmd();
 		//....
 		else
 			cli_print(CRLN "Unknown Command ?");

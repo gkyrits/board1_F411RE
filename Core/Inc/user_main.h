@@ -22,6 +22,11 @@ extern void beep(uint16_t freq, uint16_t timems);
 extern int play_mode;
 extern int internal_img;
 
+#define PWRMOD_NORM		0
+#define PWRMOD_LOW		1
+#define PWRMOD_STOP		2
+extern int power_mode;
+
 extern int alarm1_req,alarm2_req;
 
 
