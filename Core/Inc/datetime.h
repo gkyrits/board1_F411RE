@@ -9,6 +9,7 @@
 #define DATETIME_H_
 
 #include "types.h"
+#include "user_main.h" //OPTIONS
 
 typedef struct
 {
@@ -33,6 +34,7 @@ char* get_time_string(void);
 int set_time_args(char *hour, char *min, char *sec);
 int set_date_args(char *day, char *date, char *month, char *year);
 
+int enable_alarm(int alrm_id, int enable);
 int set_alarm_args(int alrm, char *date, char *hour, char *min, char *sec);
 int get_alarms(char *alrm1, char *alrm2);
 
@@ -44,5 +46,9 @@ extern void epoch_to_date_time(date_time_t* date_time,U32 epoch);
 
 extern void write_backup_str(char *data);
 extern char *read_backup_str(void);
+
+void read_options(OPTIONS *options);
+void write_options(OPTIONS *options);
+
 
 #endif /* DATETIME_H_ */

@@ -9,13 +9,22 @@
 #include "datetime.h"
 #include "stdio.h"
 #include "stdlib.h"
+#include "types.h"
 #include "string.h"
 #include "main.h"
 
 #define BACKUP_REGS 20
+#define BACKUP_SIZE (BACKUP_REGS*4) //80 bytes
+
+typedef struct back_data{
+	OPTIONS options; //up to 20 bytes
+	U8 reserv[BACKUP_SIZE-USERSTR_SIZE-sizeof(OPTIONS)];
+	char user_str[USERSTR_SIZE];
+}PACKED BACK_DATA;  //size of backup data = BACKUP_REGS*4 = 80bytes
+
 typedef union{
-	char buf8[BACKUP_REGS*4];
-	U32  buf32[BACKUP_REGS];
+	U32  regs[BACKUP_REGS];
+	BACK_DATA data;
 }BACK_UP;
 
 static BACK_UP backup;
@@ -78,15 +87,24 @@ void epoch_to_date_time(date_time_t* date_time,U32 epoch)
 }
 
 //-----------------------------------------------------------
-static void enable_alarms(void){
+int enable_alarm(int alrm_id, int enable){
 	RTC_AlarmTypeDef sAlarm;
+	uint32_t alarm;
 
-	if(HAL_RTC_GetAlarm(&hrtc,&sAlarm,RTC_ALARM_A,RTC_FORMAT_BIN)==HAL_OK){
-		HAL_RTC_SetAlarm_IT(&hrtc,&sAlarm,RTC_FORMAT_BIN);
+	if(alrm_id==1)
+		alarm=RTC_ALARM_A;
+	else
+		alarm=RTC_ALARM_B;
+
+	if(enable){
+		if(HAL_RTC_GetAlarm(&hrtc,&sAlarm,alarm,RTC_FORMAT_BIN)==HAL_OK)
+			HAL_RTC_SetAlarm_IT(&hrtc,&sAlarm,RTC_FORMAT_BIN);
 	}
-	if(HAL_RTC_GetAlarm(&hrtc,&sAlarm,RTC_ALARM_B,RTC_FORMAT_BIN)==HAL_OK){
-		HAL_RTC_SetAlarm_IT(&hrtc,&sAlarm,RTC_FORMAT_BIN);
+	else{
+		if(HAL_RTC_DeactivateAlarm(&hrtc,alarm)!=HAL_OK)
+			return _ERR;
 	}
+	return _OK;
 }
 
 //-----------------------------------------------------------
@@ -96,7 +114,6 @@ void init_datetime(void){
 
 	 if (HAL_RTC_GetDate(&hrtc,&sDate,RTC_FORMAT_BIN) == HAL_OK){
 		if(sDate.Year!=0){
-			enable_alarms();
 			date_init=TRUE;
 			return;
 		}
@@ -391,7 +408,17 @@ int set_alarm_args(int alrm, char *date, char *hour, char *min, char *sec){
 
 //-----------------------------------------------------------
 static void parse_alarm(RTC_AlarmTypeDef *sAlarm, char *alrm_buff){
-	char date[3],hour[3],min[3],sec[3];
+	char enbl[4], date[3],hour[3],min[3],sec[3];
+	uint32_t src_alrm;
+
+	if(sAlarm->Alarm==RTC_ALARM_A)
+		src_alrm=RTC_IT_ALRA;
+	else
+		src_alrm=RTC_IT_ALRB;
+	if(__HAL_RTC_ALARM_GET_IT_SOURCE(&hrtc,src_alrm))
+		sprintf(enbl,"on");
+	else
+		sprintf(enbl,"off");
 
 	if(sAlarm->AlarmMask & RTC_ALARMMASK_DATEWEEKDAY)
 		sprintf(date,"--");
@@ -410,7 +437,7 @@ static void parse_alarm(RTC_AlarmTypeDef *sAlarm, char *alrm_buff){
 	else
 		sprintf(sec,"%02d",sAlarm->AlarmTime.Seconds);
 
-	sprintf(alrm_buff,"[%s] %s:%s:%s",date,hour,min,sec);
+	sprintf(alrm_buff,"%3s. [%s] %s:%s:%s",enbl, date,hour,min,sec);
 }
 
 //-----------------------------------------------------------
@@ -433,17 +460,32 @@ int get_alarms(char *alrm1, char *alrm2){
 
 //-----------------------------------------------------------
 void write_backup_str(char *data){
-	strncpy(backup.buf8,data,sizeof(BACK_UP));
+	strncpy(backup.data.user_str,data,sizeof(backup.data.user_str));
 	for(int ii=0; ii<BACKUP_REGS; ii++)
-		HAL_RTCEx_BKUPWrite(&hrtc,RTC_BKP_DR0+ii,backup.buf32[ii]);
+		HAL_RTCEx_BKUPWrite(&hrtc,RTC_BKP_DR0+ii,backup.regs[ii]);
 }
 
 //-----------------------------------------------------------
 char *read_backup_str(void){
 	for(int ii=0; ii<BACKUP_REGS; ii++)
-		backup.buf32[ii] = HAL_RTCEx_BKUPRead(&hrtc,RTC_BKP_DR0+ii);
-	backup.buf8[sizeof(BACK_UP)-1]=0;
-	return backup.buf8;
+		backup.regs[ii] = HAL_RTCEx_BKUPRead(&hrtc,RTC_BKP_DR0+ii);
+	backup.data.user_str[sizeof(backup.data.user_str)-1]=0;
+	return backup.data.user_str;
 }
 
+//-----------------------------------------------------------
+void write_options(OPTIONS *options){
+	if(!memcmp(options,&backup.data.options,sizeof(OPTIONS)))
+		return;
+	memcpy(&backup.data.options,options,sizeof(OPTIONS));
+	for(int ii=0; ii<BACKUP_REGS; ii++)
+		HAL_RTCEx_BKUPWrite(&hrtc,RTC_BKP_DR0+ii,backup.regs[ii]);
+}
+
+//-----------------------------------------------------------
+void read_options(OPTIONS *options){
+	for(int ii=0; ii<BACKUP_REGS; ii++)
+		backup.regs[ii] = HAL_RTCEx_BKUPRead(&hrtc,RTC_BKP_DR0+ii);
+	memcpy(options,&backup.data.options,sizeof(OPTIONS));
+}
 

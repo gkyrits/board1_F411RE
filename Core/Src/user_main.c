@@ -21,8 +21,8 @@
 
 static int but1_req=0,but2_req=0;
 
-int alarm1_req=0;
-int alarm2_req=0;
+int alrm1_req=0,alrm2_req=0;
+int alrm1_en=0,alrm2_en=0;
 
 int power_mode=PWRMOD_NORM;
 
@@ -36,6 +36,8 @@ static int play_mode_old=-1;
 
 #define MENU_TIMEOUT 10
 static int mnu_tmout_cnt=0;
+
+OPTIONS options;
 
 //-------------------------------------------------------------------------
 // TEMP-DATE-TIME SCREEN
@@ -78,6 +80,11 @@ static void LCD_info_screen(void){
 	LCD_DisplayString(5,80,"Time",&Font12,LCD_BACKGROUND,YELLOW);
 	date_buf = get_time_string();
 	LCD_DisplayString(5,95,date_buf,&Font20,BLUE,GREEN);
+	//alarms
+	if(alrm1_en)
+		LCD_DisplayString(140,5,"A1",&Font12,LCD_BACKGROUND,YELLOW);
+	if(alrm2_en)
+		LCD_DisplayString(140,20,"A2",&Font12,LCD_BACKGROUND,YELLOW);
 }
 
 //-------------------------------------------------------------------------
@@ -175,6 +182,7 @@ static void menu_action(int mnu_id, int item_id){
 		}
 		break; //MENU_1
 	}
+	update_options();
 }
 
 //-------------------------------------------------------------------------
@@ -264,12 +272,46 @@ static void one_sec_time_event(void){
 }
 
 //-------------------------------------------------------------------------
+static void apply_options(void){
+	read_options(&options);
+	play_mode = options.play_mode;
+	internal_img = options.intrn_img;
+	alrm1_en=options.alrm1_en;
+	alrm2_en=options.alrm2_en;
+
+	//init images
+	if((play_mode==PLYMOD_IMG) || (play_mode==PLYMOD_IMG_INF)){
+		if(!internal_img){
+			int err;
+			read_image_list(&err);
+		}
+	}
+
+	//enable_alarms
+	if(alrm1_en)
+		enable_alarm(1,1);
+	if(alrm2_en)
+		enable_alarm(2,1);
+}
+
+//-------------------------------------------------------------------------
+void update_options(void){
+	options.play_mode = play_mode;
+	options.intrn_img = internal_img;
+	options.alrm1_en = alrm1_en;
+	options.alrm2_en = alrm2_en;
+
+	write_options(&options);
+}
+
+//-------------------------------------------------------------------------
 //MAIN
 //-------------------------------------------------------------------------
 void main_init(void){
 	printf(HELLO_STR "\n");
 	init_datetime();
-	HAL_TIM_PWM_Start(&htim11,TIM_CHANNEL_1);
+	apply_options();
+	HAL_TIM_PWM_Start(&htim11,TIM_CHANNEL_1); //LCD PWM
 	LCD_Init(D2U_L2R);
 	LCD_Demo();
 	init_console();
@@ -282,17 +324,17 @@ void main_loop(void){
 		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
 	HAL_Delay(100);
 
-	if(alarm1_req){
+	if(alrm1_req){
 		beep(5000,50);
-		alarm1_req=0;
+		alrm1_req=0;
 	}
-	if(alarm2_req){
+	if(alrm2_req){
 		beep(4000,50);
 		HAL_Delay(50);
 		beep(4000,50);
 		HAL_Delay(50);
 		beep(4000,50);
-		alarm2_req=0;
+		alrm2_req=0;
 	}
 
 	if(command_req)

@@ -17,6 +17,7 @@
 #include "user_main.h"
 #include "beeper.h"
 #include "test_temp.h"
+#include "LCD.h"
 
 #define CRLN 	"\r\n"
 #define PROMPT 	"cmd>"
@@ -30,6 +31,7 @@
 #define EPOCH_CMD	    "get_epoch"
 #define SET_EPOCH_CMD   "set_epoch"
 #define SET_ALARM_CMD   "set_alarm"
+#define ENBL_ALARM_CMD  "enbl_alarm"
 #define ALARM_CMD   	"get_alarm"
 #define BACKUP_CMD	    "backup"
 #define GET_BACKUP_CMD  "get_backup"
@@ -55,6 +57,7 @@
 #define EPOCH_CMD_DSCR	 	"(show epoch-time)"
 #define SET_EPOCH_CMD_DSCR	"[epoch(hex)] (set epoch-time)"
 #define SET_ALARM_CMD_DSCR  "[alrm:1/2] [date] [hour] [min] [sec] (set_alarm)"
+#define ENBL_ALARM_CMD_DSCR "[alrm:1/2] [enable:0/1] (enable/disable alarms)"
 #define ALARM_CMD_DSCR   	"(get alarms info)"
 #define BACKUP_CMD_DSCR	   	"[text]	(save a backup text)"
 #define GET_BACKUP_CMD_DSCR "(read the backup text)"
@@ -120,6 +123,7 @@ static void help_cmd(void){
 	cli_printf(CRLN "%10s %s", EPOCH_CMD, EPOCH_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", SET_EPOCH_CMD, SET_EPOCH_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", SET_ALARM_CMD, SET_ALARM_CMD_DSCR);
+	cli_printf(CRLN "%10s %s", ENBL_ALARM_CMD, ENBL_ALARM_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", ALARM_CMD, ALARM_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", BACKUP_CMD, BACKUP_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", GET_BACKUP_CMD, GET_BACKUP_CMD_DSCR);
@@ -251,9 +255,51 @@ static void set_alarm_cmd(void){
 		cli_print(CRLN "fail set alarm");
 	cli_print(CRLN PROMPT);
 
+	if(alrm_id==1)
+		alrm1_en=1;
+	if(alrm_id==2)
+		alrm1_en=2;
+	update_options();
+
 	return;
 	help:
 	cli_print(CRLN SET_ALARM_CMD " " SET_ALARM_CMD_DSCR);
+}
+
+//----------------------------------------------------------------------------------
+static void enable_alarm_cmd(void){
+	int ret,alrm_id,en;
+
+	if(argc<3)
+		goto help;
+
+	alrm_id=atoi(argv[1]);
+	if((alrm_id<1) || (alrm_id>2))
+		goto help;
+
+	en = atoi(argv[2]);
+	if((en<0) || (en>1))
+		goto help;
+	ret=enable_alarm(alrm_id,en);
+	if(ret==_ERR){
+		if(en)
+			cli_printf(CRLN "fail enable alarm %d",alrm_id);
+		else
+			cli_printf(CRLN "fail disable alarm %d",alrm_id);
+	}
+	else
+		cli_print(CRLN "ok!");
+	cli_print(CRLN PROMPT);
+
+	if(alrm_id==1)
+		alrm1_en=en;
+	if(alrm_id==2)
+		alrm1_en=en;
+	update_options();
+
+	return;
+	help:
+	cli_print(CRLN ENBL_ALARM_CMD " " ENBL_ALARM_CMD_DSCR);
 }
 
 //----------------------------------------------------------------------------------
@@ -271,15 +317,14 @@ static void get_alarms_cmd(void){
 }
 
 //----------------------------------------------------------------------------------
-#define BACKUP_SIZE 80
 static void backup_cmd(void){
 	int remain;
-	char backup_txt[BACKUP_SIZE]="";
+	char backup_txt[USERSTR_SIZE]="";
 	if(argc<2)
 		goto help;
 
 	for(int ii=1; ii<argc; ii++){
-		remain = BACKUP_SIZE - strlen(backup_txt);
+		remain = USERSTR_SIZE - strlen(backup_txt);
 		if(remain<2)
 			break;
 		if(strlen(argv[ii])>remain)
@@ -289,7 +334,7 @@ static void backup_cmd(void){
 	}
 	write_backup_str(backup_txt);
 	cli_printf(CRLN "save backup: [%s]",backup_txt);
-	cli_printf(CRLN "%d of %d bytes",strlen(backup_txt),BACKUP_SIZE);
+	cli_printf(CRLN "%d of %d bytes",strlen(backup_txt),USERSTR_SIZE);
 	cli_print(CRLN PROMPT);
 
 	return;
@@ -303,7 +348,7 @@ static void get_backup_cmd(void){
 
 	text=read_backup_str();
 	cli_printf(CRLN "read backup: [%s]",text);
-	cli_printf(CRLN "%d of %d bytes",strlen(text),BACKUP_SIZE);
+	cli_printf(CRLN "%d of %d bytes",strlen(text),USERSTR_SIZE);
 	cli_print(CRLN PROMPT);
 }
 
@@ -520,6 +565,7 @@ static void play_images_cmd(void){
 	if(play_mode == PLYMOD_INF){
 		cli_printf(CRLN "slide show disabled");
 		cli_print(CRLN);
+		update_options();
 		return;
 	}
 
@@ -528,22 +574,24 @@ static void play_images_cmd(void){
 		if(!strcmp(argv[2],"int"))
 			internal_img=1;
 	}
-
 	if(internal_img){
 		cli_printf(CRLN "read internal images");
 		cli_print(CRLN);
+		update_options();
 		return;
 	}
 
 	num=read_image_list(&err);
 	if(err!=NO_ERR){
 		cli_printf(CRLN "error: %s",read_image_error(err));
+		update_options();
 		return;
 	}
 	cli_printf(CRLN "read %d images",num);
 	if(num>0)
 		internal_img=0;
 	cli_print(CRLN);
+	update_options();
 	return;
 
 	help:
@@ -631,6 +679,8 @@ void parse_cmd(void){
 			set_epoch_cmd();
 		else if(!strcmp(argv[0],SET_ALARM_CMD))
 			set_alarm_cmd();
+		else if(!strcmp(argv[0],ENBL_ALARM_CMD))
+			enable_alarm_cmd();
 		else if(!strcmp(argv[0],ALARM_CMD))
 			get_alarms_cmd();
 		else if(!strcmp(argv[0],BACKUP_CMD))

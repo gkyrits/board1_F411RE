@@ -259,9 +259,9 @@ void RTC_Alarm_IRQHandler(void)
 {
   /* USER CODE BEGIN RTC_Alarm_IRQn 0 */
 	  if(__HAL_RTC_ALARM_GET_IT(&hrtc,RTC_IT_ALRA))
-		  alarm1_req=1;
+		  alrm1_req=1;
 	  if(__HAL_RTC_ALARM_GET_IT(&hrtc,RTC_IT_ALRB))
-		  alarm2_req=1;
+		  alrm2_req=1;
   /* USER CODE END RTC_Alarm_IRQn 0 */
   HAL_RTC_AlarmIRQHandler(&hrtc);
   /* USER CODE BEGIN RTC_Alarm_IRQn 1 */
