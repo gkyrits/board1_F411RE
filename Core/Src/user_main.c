@@ -24,12 +24,13 @@ static int but1_req=0,but2_req=0;
 int alrm1_req=0,alrm2_req=0;
 int alrm1_en=0,alrm2_en=0;
 
+int wakeup_req=0; //1min WakeUp Timer for get and save temperature!
+
 int power_mode=PWRMOD_NORM;
 
 static int menu_on=0;
 static int menu_id;
 
-#define IMG_TMOUT	20
 int play_mode=PLYMOD_INF;
 int internal_img=0;
 static int play_mode_old=-1;
@@ -38,6 +39,26 @@ static int play_mode_old=-1;
 static int mnu_tmout_cnt=0;
 
 OPTIONS options;
+
+//-------------------------------------------------------------------------
+// UPDATE TEMPERATURE
+//-------------------------------------------------------------------------
+static void update_temperature(void){
+	int ret;
+	float temp;
+
+	if(power_mode==PWRMOD_NORM)
+		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_SET);
+	//get temper
+	for(int ii=0; ii<3; ii++){
+		test_onewire();
+		ret=get_temperature(&temp);
+		if(ret==_OK)
+			break;
+	}
+	if(power_mode==PWRMOD_NORM)
+		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_RESET);
+}
 
 //-------------------------------------------------------------------------
 // TEMP-DATE-TIME SCREEN
@@ -55,20 +76,11 @@ static void LCD_info_screen(void){
 	char temp_str[5];
 	char *date_buf;
 	//get temper
-	if(power_mode==PWRMOD_NORM)
-		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_SET);
-	for(int ii=0; ii<3; ii++){
-		test_onewire();
-		ret=get_temperature(&temp);
-		if(ret==_OK)
-			break;
-	}
+	ret=get_temperature(&temp);
 	if(ret==_OK)
 		sprintf(temp_str,"%04.1f",temp);
 	else
 		sprintf(temp_str,"--.-");
-	if(power_mode==PWRMOD_NORM)
-		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_RESET);
 	//draw screen
 	LCD_DisplayString(5,5,"Temperature",&Font12,LCD_BACKGROUND,YELLOW);
 	LCD_DisplayString(5,20,temp_str,&Font24,LCD_BACKGROUND,RED);
@@ -248,19 +260,6 @@ static void one_sec_time_event(void){
 		}
 		play_mode_old=play_mode;
 	}
-
-	//every IMG_TMOUT sec
-	if((sec_cnt%IMG_TMOUT==0) && (sec_cnt>0)){
-		if(play_mode==PLYMOD_INF){
-			LCD_Clear(BLUE);
-		}
-		if((play_mode==PLYMOD_IMG) || (play_mode==PLYMOD_IMG_INF)){
-			LCD_image_screen();
-		}
-		if((play_mode==PLYMOD_INF) || (play_mode==PLYMOD_IMG_INF)){
-			LCD_info_screen();
-		}
-	}
 	else{
 	//every sec
 		if((play_mode==PLYMOD_INF) || (play_mode==PLYMOD_IMG_INF)){
@@ -315,6 +314,7 @@ void main_init(void){
 	LCD_Init(D2U_L2R);
 	LCD_Demo();
 	init_console();
+	update_temperature();
 }
 
 
@@ -323,6 +323,13 @@ void main_loop(void){
 	if(power_mode==PWRMOD_NORM)
 		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
 	HAL_Delay(100);
+
+	if(wakeup_req){ //1min WakeUp Timer for get and save temperature!
+		//beep(500,50);
+		update_temperature();
+		play_mode_old=-1; //create screen update
+		wakeup_req=0;
+	}
 
 	if(alrm1_req){
 		beep(5000,50);

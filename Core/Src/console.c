@@ -258,7 +258,7 @@ static void set_alarm_cmd(void){
 	if(alrm_id==1)
 		alrm1_en=1;
 	if(alrm_id==2)
-		alrm1_en=2;
+		alrm2_en=1;
 	update_options();
 
 	return;
@@ -294,7 +294,7 @@ static void enable_alarm_cmd(void){
 	if(alrm_id==1)
 		alrm1_en=en;
 	if(alrm_id==2)
-		alrm1_en=en;
+		alrm2_en=en;
 	update_options();
 
 	return;

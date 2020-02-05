@@ -317,7 +317,11 @@ static void MX_RTC_Init(void)
   //Check if RTC already initialized
   if (HAL_RTC_GetDate(&hrtc,&sDate,RTC_FORMAT_BIN) == HAL_OK){
 		if(sDate.Year!=0)
-			return; //RTC already initialized.
+			goto RTC_isok; //RTC already initialized.
+  }
+  else{
+	  Error_Handler();
+  }
   /* USER CODE END Check_RTC_BKUP */
 
   /** Initialize RTC and set the Time and Date 
@@ -365,10 +369,20 @@ static void MX_RTC_Init(void)
   {
     Error_Handler();
   }
+  /** Enable the WakeUp 
+  */
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 60, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN RTC_Init 2 */
-  } //Check block
-  else{
-	  Error_Handler();
+  return;
+  RTC_isok:
+  // RTC already programmed.
+  // Enable the WakeUp : 1min WakeUp Timer for get and save temperature!
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 60, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
+  {
+    Error_Handler();
   }
   /* USER CODE END RTC_Init 2 */
 
