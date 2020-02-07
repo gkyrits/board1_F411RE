@@ -51,6 +51,7 @@
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 extern void check_memory(void);
+extern void update_fatfs_timers(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -194,6 +195,7 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
+  update_fatfs_timers();
   check_memory();
   /* USER CODE END SysTick_IRQn 1 */
 }

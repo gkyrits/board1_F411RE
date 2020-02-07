@@ -43,6 +43,21 @@ OPTIONS options;
 //-------------------------------------------------------------------------
 // UPDATE TEMPERATURE
 //-------------------------------------------------------------------------
+#define RECORD_FILE "records.txt"
+static void write_temperature(float temp){
+	char rec_line[80];
+	int16_t temp16;
+	uint32_t time;
+
+	temp16 = temp*10;
+	time = get_datetime_epoch();
+	sprintf(rec_line,"%8X %4d",time,temp16);
+
+	printf("rec:[%s]\n",rec_line);
+	write_record_line(RECORD_FILE,rec_line);
+}
+
+//-------------------------------------------------------------------------
 static void update_temperature(void){
 	int ret;
 	float temp;
@@ -58,6 +73,8 @@ static void update_temperature(void){
 	}
 	if(power_mode==PWRMOD_NORM)
 		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_RESET);
+	if(ret==_OK)
+		write_temperature(temp);
 }
 
 //-------------------------------------------------------------------------

@@ -290,7 +290,56 @@ int fatfs_list_images(cli_print_t print, int add_list){
     return res;
 }
 
+
 //-------------------------------------------------------------------------
+//  FS RECORDS ROYTINS
+//-------------------------------------------------------------------------
+int write_record_line(const char *name ,char *line){
+	FIL MyFile;
+	FRESULT ret;
+	int rwbytes;
+
+	//check if already mount
+	ret=fatfs_mount(1);
+	if(ret!=FR_OK){
+		//error. try remount!
+		fatfs_mount(0);
+		ret=fatfs_mount(1);
+		if(ret!=FR_OK)
+			return ERR_FS_MOUNT;
+	}
+
+	ret = f_open(&MyFile, name, FA_OPEN_APPEND | FA_WRITE);
+	if(ret!=FR_OK){
+		printf("%s() fail f_open file[%s]\n",__FUNCTION__,name);
+		return ERR_FS_WRITE;
+	}
+
+	rwbytes = f_printf(&MyFile, "%s\n", line);
+	if(rwbytes<=0){
+		f_close(&MyFile);
+		printf("%s() fail f_printf\n",__FUNCTION__);
+		return ERR_FS_WRITE;
+	}
+	printf("%s() write %d bytes\n",__FUNCTION__,rwbytes);
+
+	ret = f_close(&MyFile);
+	if(ret!=FR_OK)
+		printf("%s() fail f_close\n",__FUNCTION__);
+
+	return NO_ERR;
+}
+
+
+//-------------------------------------------------------------------------
+int read_record_block(void){
+	//...
+}
+
+
+
+//-------------------------------------------------------------------------
+//  FS IMAGE ROYTINS
 //-------------------------------------------------------------------------
 char* read_image_error(int err){
 	switch(err){
