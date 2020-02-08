@@ -8,6 +8,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#include <math.h>
 #include "main.h"
 #include "console.h"
 #include "datetime.h"
@@ -37,6 +38,9 @@ static int play_mode_old=-1;
 
 #define MENU_TIMEOUT 10
 static int mnu_tmout_cnt=0;
+
+static int graph_on=0;
+static COLOR graph_col;
 
 OPTIONS options;
 
@@ -80,6 +84,75 @@ static void update_temperature(void){
 //-------------------------------------------------------------------------
 // RECORDS GRAPH
 //-------------------------------------------------------------------------
+static int32_t find_screen_pos(int32_t min_val, int32_t max_val, int32_t val, int32_t min_pos, int32_t max_pos){
+	int32_t val_mxmn,pos_mxmn,d1,value;
+    double k, fd2,fvalue;
+
+    val_mxmn = max_val - min_val;
+    pos_mxmn = max_pos - min_pos;
+    k = (double)pos_mxmn / (double)val_mxmn;
+
+    d1 = val - min_val;
+    fd2 = (double)d1 * k;
+
+    fvalue = (double)min_pos + fd2;
+    value = (int32_t)round(fvalue);
+
+    return value;
+}
+
+//-------------------------------------------------------------------------
+static void LCD_graph_screen(COLOR col, DAY_RECS *records){
+	int16_t min_temp=900,max_temp=-900,cur_temp;
+	uint32_t min_time,max_time;
+	uint32_t min_temp_tm,max_temp_tm;
+	uint16_t rec_num,xp,yp;
+	date_time_t stime;
+	char info[80];
+
+
+	graph_on=1;
+	graph_col = col;
+	LCD_Clear(col);
+	LCD_DrawRectangle (1, 1, LCD_WIDTH, LCD_HEIGHT-22, WHITE, DRAW_EMPTY , 1);
+
+	rec_num=records->rec_num;
+	//find limits
+	for(int ii=0; ii<rec_num; ii++){
+		if(records->rec[ii].temp<min_temp){
+			min_temp = records->rec[ii].temp;
+			min_temp_tm = records->rec[ii].time;
+		}
+		if(records->rec[ii].temp>max_temp){
+			max_temp = records->rec[ii].temp;
+			max_temp_tm = records->rec[ii].time;
+		}
+	}
+	min_time=records->rec[0].time;
+	max_time=records->rec[rec_num-1].time;
+	cur_temp=records->rec[rec_num-1].temp;
+
+	//print info
+	epoch_to_date_time(&stime,min_temp_tm);
+	sprintf(info,"min:%d %d:%d",min_temp,stime.hour,stime.minute);
+	LCD_DisplayString(60,112,info,&Font8,graph_col,WHITE);
+	epoch_to_date_time(&stime,max_temp_tm);
+	sprintf(info,"max:%d %d:%d",max_temp,stime.hour,stime.minute);
+	LCD_DisplayString(60,120,info,&Font8,graph_col,WHITE);
+	sprintf(info,"%d",cur_temp);
+	LCD_DisplayString(135,112,info,&Font12,graph_col,RED);
+
+	//print graph
+	for(int ii=0; ii<rec_num; ii++){
+		xp = find_screen_pos(min_time,max_time,records->rec[ii].time,1,LCD_WIDTH-1);
+		yp = find_screen_pos(min_temp-10,max_temp+10,records->rec[ii].temp,LCD_HEIGHT-22,1);
+		LCD_SetPointlColor(xp,yp,YELLOW);
+	}
+
+}
+
+
+//-------------------------------------------------------------------------
 void LCD_records_graph(uint16_t col){
 	DAY_RECS *records;
 	int err;
@@ -88,7 +161,8 @@ void LCD_records_graph(uint16_t col){
 	if(!records)
 		return;
 
-	//...
+	LCD_graph_screen(col,records);
+
 	free(records);
 }
 
@@ -99,7 +173,12 @@ void LCD_records_graph(uint16_t col){
 static void LCD_update_time(COLOR col){
 	char *date;
 	date = get_time_string();
-	LCD_DisplayString(5,95,date,&Font20,col,GREEN);
+	if(graph_on){
+		LCD_DisplayString(1,112,date,&Font12,graph_col,GREEN);
+	}
+	else{
+		LCD_DisplayString(5,95,date,&Font20,col,GREEN);
+	}
 }
 
 //-------------------------------------------------------------------------
@@ -259,9 +338,16 @@ static void button_menu(void){
 
 //-------------------------------------------------------------------------
 static void button_select(void){
-	if(!menu_on)
+	if(menu_on){
+		menu_action(menu_id,get_mnu_item(menu_id));
 		return;
-	menu_action(menu_id,get_mnu_item(menu_id));
+	}
+	if(graph_on){
+		graph_on=0;
+		play_mode_old=-1;
+		return;
+	}
+	LCD_records_graph(BLUE);
 }
 
 
@@ -270,12 +356,25 @@ static void button_select(void){
 //-------------------------------------------------------------------------
 static void one_sec_time_event(void){
 	static uint8_t sec_cnt=0;
+	static uint8_t reset_cnt=0;
 
 	if(menu_on){
 		menu_one_sec();
 		sec_cnt=0;
 		play_mode_old=-1;
 		return;
+	}
+
+	if(graph_on){
+		if(!reset_cnt){
+			sec_cnt=0;
+			reset_cnt=1;
+		}
+		if(sec_cnt>60){
+			graph_on=0;
+			reset_cnt=0;
+			play_mode_old=-1;
+		}
 	}
 
 
@@ -292,6 +391,7 @@ static void one_sec_time_event(void){
 			LCD_info_screen();
 		}
 		play_mode_old=play_mode;
+		reset_cnt=0;
 	}
 	else{
 	//every sec
@@ -360,7 +460,8 @@ void main_loop(void){
 	if(wakeup_req){ //1min WakeUp Timer for get and save temperature!
 		//beep(500,50);
 		update_temperature();
-		play_mode_old=-1; //create screen update
+		if((!graph_on) && (!menu_on))
+			play_mode_old=-1; //create screen update
 		wakeup_req=0;
 	}
 

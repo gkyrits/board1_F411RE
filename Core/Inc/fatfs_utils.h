@@ -45,6 +45,7 @@ typedef struct time_rec{
 typedef struct day_recs{
 	TIME_REC rec[DAY_REC_NUM];
 	uint16_t rec_num;
+	uint32_t time;
 }DAY_RECS;
 
 

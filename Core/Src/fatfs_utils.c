@@ -337,10 +337,11 @@ int write_record_line(const char *name ,char *line){
 #define DAY_SECS	 (24*60*60)
 
 //-------------------------------------------------------------------------
-static void parse_record_line(uint32_t start_time, char *line ,DAY_RECS *records){
+static void parse_record_line(char *line ,DAY_RECS *records){
 	int  argc;
 	char *argv[3];
 	char *arg;
+	uint32_t start_time;
 	uint32_t time;
 	int16_t  temp;
 
@@ -366,6 +367,7 @@ static void parse_record_line(uint32_t start_time, char *line ,DAY_RECS *records
 	temp=atoi(argv[1]);
 
 	//printf("rec[%d]  time=%X  temp=%d\n",records->rec_num,time,temp);
+	start_time = records->time;
 
 	if((temp==0) || (time==0))
 		return;
@@ -416,11 +418,12 @@ DAY_RECS *read_record_block(const char *name , int *err){
 	records->rec_num=0;
 
 	start_time=get_datetime_epoch();
+	records->time=start_time;
 	for(;;){
 		retbuff = f_gets(linebuff, sizeof(workbuff), &MyFile);
 		if(retbuff==NULL)
 			break;
-		parse_record_line(start_time,linebuff,records);
+		parse_record_line(linebuff,records);
 		if(records->rec_num>=DAY_REC_NUM)
 			break;
 	}
