@@ -9,6 +9,7 @@
 #include "string.h"
 #include "fatfs.h"
 #include "libjpeg.h"
+#include "datetime.h"
 
 static char workbuff[512];
 
@@ -332,8 +333,106 @@ int write_record_line(const char *name ,char *line){
 
 
 //-------------------------------------------------------------------------
-int read_record_block(void){
-	//...
+
+#define DAY_SECS	 (24*60*60)
+
+//-------------------------------------------------------------------------
+static void parse_record_line(uint32_t start_time, char *line ,DAY_RECS *records){
+	int  argc;
+	char *argv[3];
+	char *arg;
+	uint32_t time;
+	int16_t  temp;
+
+	//split line to args
+	argc=0;
+	arg = strtok(line," ");
+	while(arg){
+		argv[argc]=arg;
+		argc++;
+		if(argc>=3)
+			break;
+		arg = strtok(NULL," ");
+	}
+
+	//check args
+	if(argc<2)
+		return;
+	if(strlen(argv[0])!=8)
+		return;
+	if(strlen(argv[1])<3)
+		return;
+	sscanf(argv[0],"%X",&time);
+	temp=atoi(argv[1]);
+
+	//printf("rec[%d]  time=%X  temp=%d\n",records->rec_num,time,temp);
+
+	if((temp==0) || (time==0))
+		return;
+	if((start_time-time)>DAY_SECS)
+		return;
+	if(records->rec_num>=DAY_REC_NUM)
+		return;
+
+	records->rec[records->rec_num].time=time;
+	records->rec[records->rec_num].temp=temp;
+	records->rec_num++;
+}
+
+
+//-------------------------------------------------------------------------
+DAY_RECS *read_record_block(const char *name , int *err){
+	FIL MyFile;
+	FRESULT ret;
+	TCHAR linebuff[160],*retbuff;
+	DAY_RECS *records;
+	uint32_t start_time;
+
+	//check if already mount
+	ret=fatfs_mount(1);
+	if(ret!=FR_OK){
+		//error. try remount!
+		fatfs_mount(0);
+		ret=fatfs_mount(1);
+		if(ret!=FR_OK){
+			*err=ERR_FS_MOUNT;
+			return 0;
+		}
+	}
+
+	ret = f_open(&MyFile, name, FA_OPEN_EXISTING | FA_READ);
+	if(ret!=FR_OK){
+		printf("%s() fail f_open file[%s]\n",__FUNCTION__,name);
+		*err=ERR_FS_WRITE;
+		return 0;
+	}
+
+	records=malloc(sizeof(DAY_RECS));
+	if(!records){
+		f_close(&MyFile);
+		*err=ERR_MEMORY;
+		return 0;
+	}
+	records->rec_num=0;
+
+	start_time=get_datetime_epoch();
+	for(;;){
+		retbuff = f_gets(linebuff, sizeof(workbuff), &MyFile);
+		if(retbuff==NULL)
+			break;
+		parse_record_line(start_time,linebuff,records);
+		if(records->rec_num>=DAY_REC_NUM)
+			break;
+	}
+	if(f_error(&MyFile))
+		printf("%s() fail read!\n",__FUNCTION__);
+
+	ret = f_close(&MyFile);
+	if(ret!=FR_OK)
+		printf("%s() fail f_close\n",__FUNCTION__);
+
+	*err=NO_ERR;
+	return records;
 }
 
 

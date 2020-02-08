@@ -33,7 +33,24 @@ extern char* read_image_error(int err);
 extern int read_image_list(int *err);
 extern int LCD_load_next_image(void);
 
+//-------------------------------------------------------------------------
+#define DAY_REC_NUM  (24*60)
+
+typedef struct time_rec{
+	uint32_t time;
+	int16_t  temp;
+}TIME_REC;
+
+//24Hours records
+typedef struct day_recs{
+	TIME_REC rec[DAY_REC_NUM];
+	uint16_t rec_num;
+}DAY_RECS;
+
+
 extern int write_record_line(const char *name ,char *line);
+extern DAY_RECS *read_record_block(const char *name , int *err);
+
 
 
 #endif /* INC_FATFS_UTILS_H_ */

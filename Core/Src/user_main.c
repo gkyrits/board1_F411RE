@@ -51,7 +51,7 @@ static void write_temperature(float temp){
 
 	temp16 = temp*10;
 	time = get_datetime_epoch();
-	sprintf(rec_line,"%8X %4d",time,temp16);
+	sprintf(rec_line,"%8X %03d",time,temp16);
 
 	printf("rec:[%s]\n",rec_line);
 	write_record_line(RECORD_FILE,rec_line);
@@ -76,6 +76,22 @@ static void update_temperature(void){
 	if(ret==_OK)
 		write_temperature(temp);
 }
+
+//-------------------------------------------------------------------------
+// RECORDS GRAPH
+//-------------------------------------------------------------------------
+void LCD_records_graph(uint16_t col){
+	DAY_RECS *records;
+	int err;
+
+	records = read_record_block(RECORD_FILE,&err);
+	if(!records)
+		return;
+
+	//...
+	free(records);
+}
+
 
 //-------------------------------------------------------------------------
 // TEMP-DATE-TIME SCREEN

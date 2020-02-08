@@ -29,6 +29,9 @@ extern void button2_irq(void);
 
 extern void beep(uint16_t freq, uint16_t timems);
 
+extern void LCD_records_graph(uint16_t col);
+
+
 #define PLYMOD_INF 		0
 #define PLYMOD_IMG 		1
 #define PLYMOD_IMG_INF 	2
