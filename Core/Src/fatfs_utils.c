@@ -339,11 +339,12 @@ int write_record_line(const char *name ,char *line){
 //-------------------------------------------------------------------------
 static void parse_record_line(char *line ,DAY_RECS *records){
 	int  argc;
-	char *argv[3];
+	char *argv[4];
 	char *arg;
 	uint32_t start_time;
 	uint32_t time;
-	int16_t  temp;
+	int16_t  temp,temp2=0;
+	int8_t   humid=0;
 
 	//split line to args
 	argc=0;
@@ -351,7 +352,7 @@ static void parse_record_line(char *line ,DAY_RECS *records){
 	while(arg){
 		argv[argc]=arg;
 		argc++;
-		if(argc>=3)
+		if(argc>=4)
 			break;
 		arg = strtok(NULL," ");
 	}
@@ -365,8 +366,11 @@ static void parse_record_line(char *line ,DAY_RECS *records){
 		return;
 	sscanf(argv[0],"%X",&time);
 	temp=atoi(argv[1]);
+	if(argc>3){
+		humid=atoi(argv[2]);
+		temp2=atoi(argv[3]);
+	}
 
-	//printf("rec[%d]  time=%X  temp=%d\n",records->rec_num,time,temp);
 	start_time = records->time;
 
 	if((temp==0) || (time==0))
@@ -376,8 +380,12 @@ static void parse_record_line(char *line ,DAY_RECS *records){
 	if(records->rec_num>=DAY_REC_NUM)
 		return;
 
+	//printf("rec[%d]  time=%X  temp=%d temp2=%d humid=%d\n",records->rec_num,time,temp,temp2,humid);
+
 	records->rec[records->rec_num].time=time;
 	records->rec[records->rec_num].temp=temp;
+	records->rec[records->rec_num].humid=humid;
+	records->rec[records->rec_num].temp2=temp2;
 	records->rec_num++;
 }
 

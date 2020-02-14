@@ -10,6 +10,8 @@
 
 void Enable_micro_Timer(void);
 void Delay_micro(uint32_t micros);
+uint32_t Get_micros(void);
+
 
 void GPIO_SetPinLow(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
 void GPIO_SetPinHigh(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);

@@ -232,7 +232,7 @@ char* get_time_string(void){
 		 return datetime_buff;
 	 }
 
-	 sprintf(datetime_buff,"%2d:%2d:%2d",sTime.Hours,sTime.Minutes,sTime.Seconds);
+	 sprintf(datetime_buff,"%02d:%02d:%02d",sTime.Hours,sTime.Minutes,sTime.Seconds);
 
 	 if (HAL_RTC_GetDate(&hrtc,&sDate,RTC_FORMAT_BIN) != HAL_OK)
 		 printf("Error getDate\n");

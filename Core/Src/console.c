@@ -48,6 +48,7 @@
 #define PLAY_IMG_CMD    "slide_show"
 #define SET_POWER_CMD   "set_power"
 #define SHOW_RECS_CMD   "records"
+#define GET_HUMID_CMD   "get_humid"
 
 
 #define HELP_CMD_DSCR    	"(command descriptions)"
@@ -77,6 +78,7 @@
 #define PLAY_IMG_CMD_DSCR    "[on/on_info/off] ([int]) (Play Slide Show)"
 #define SET_POWER_CMD_DSCR   "[norm/low/stop]  (set_power)"
 #define SHOW_RECS_CMD_DSCR   "(show records)"
+#define GET_HUMID_CMD_DSCR   "(get_humidity)"
 
 
 #define BUFF_LEN  160
@@ -142,6 +144,7 @@ static void help_cmd(void){
 	cli_printf(CRLN "%10s %s", PLAY_IMG_CMD, PLAY_IMG_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", SET_POWER_CMD, SET_POWER_CMD_DSCR);
 	cli_printf(CRLN "%10s %s", SHOW_RECS_CMD, SHOW_RECS_CMD_DSCR);
+	cli_printf(CRLN "%10s %s", GET_HUMID_CMD, GET_HUMID_CMD_DSCR);
 	//...
 	cli_print(CRLN);
 }
@@ -656,6 +659,21 @@ static void show_recs_cmd(void){
 	cli_print(CRLN);
 }
 
+
+//----------------------------------------------------------------------------------
+static void get_humidity_cmd(void){
+	float humid, temp;
+	int ret;
+
+	ret=read_humidity(&humid, &temp);
+	if(ret!=_OK)
+		cli_print(CRLN "fail read DHT11!");
+	else
+		cli_printf(CRLN "Humidity:%.1f  Temperature:%.1f",humid,temp);
+
+	cli_print(CRLN);
+}
+
 //----------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------
@@ -726,6 +744,8 @@ void parse_cmd(void){
 			set_power_cmd();
 		else if(!strcmp(argv[0],SHOW_RECS_CMD))
 			show_recs_cmd();
+		else if(!strcmp(argv[0],GET_HUMID_CMD))
+			get_humidity_cmd();
 		//....
 		else
 			cli_print(CRLN "Unknown Command ?");

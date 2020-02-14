@@ -715,6 +715,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(BAT_CN_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : DHT11_Pin */
+  GPIO_InitStruct.Pin = DHT11_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(DHT11_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : SPI4_CS1_Pin SPI4_CS2_Pin */
   GPIO_InitStruct.Pin = SPI4_CS1_Pin|SPI4_CS2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;

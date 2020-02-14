@@ -17,6 +17,7 @@
 #include "test_temp.h"
 #include "menu.h"
 #include "fatfs_utils.h"
+#include "dht11.h"
 
 #include "user_main.h"
 
@@ -45,29 +46,66 @@ static COLOR graph_col;
 OPTIONS options;
 
 //-------------------------------------------------------------------------
+// UPDATE HUMIDITY (DHT11)
+//-------------------------------------------------------------------------
+DHT11_Dev dev;
+
+static void init_dht11(void){
+	DHT11_Init(&dev,DHT11_GPIO_Port,DHT11_Pin);
+}
+
+//-------------------------------------------------------------------------
+int read_humidity(float *humid, float *temp){
+	int ret;
+
+	ret=DHT11_Read(&dev);
+	if(ret!=DHT11_SUCCESS){
+		printf("Error read DHT11\n!");
+		return _ERR;
+	}
+
+	*humid = dev.humidity;
+	*temp  = dev.temparature;
+	return _OK;
+}
+
+//-------------------------------------------------------------------------
+static int get_humidity(float *humid, float *temp){
+
+	*humid = dev.humidity;
+	*temp  = dev.temparature;
+	if(dev.err!=DHT11_SUCCESS)
+		return _ERR;
+	else
+		return _OK;
+}
+
+//-------------------------------------------------------------------------
 // UPDATE TEMPERATURE
 //-------------------------------------------------------------------------
 #define RECORD_FILE "records.txt"
-static void write_temperature(float temp){
+static void write_records(float temp, uint8_t humid, float temp2){
 	char rec_line[80];
-	int16_t temp16;
+	int16_t temp16,temp16_2;
 	uint32_t time;
 
-	temp16 = temp*10;
+	temp16   = temp*10;
+	temp16_2 = temp2*10;
 	time = get_datetime_epoch();
-	sprintf(rec_line,"%8X %03d",time,temp16);
+	sprintf(rec_line,"%8X %03d %02d %03d",time,temp16,humid,temp16_2);
 
 	printf("rec:[%s]\n",rec_line);
 	write_record_line(RECORD_FILE,rec_line);
 }
 
 //-------------------------------------------------------------------------
-static void update_temperature(void){
+static void update_sensors(void){
 	int ret;
-	float temp;
+	float temp=0,temp2=0,humid=0;
 
 	if(power_mode==PWRMOD_NORM)
 		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_SET);
+
 	//get temper
 	for(int ii=0; ii<3; ii++){
 		test_onewire();
@@ -75,10 +113,13 @@ static void update_temperature(void){
 		if(ret==_OK)
 			break;
 	}
+	//get humidity
+	read_humidity(&humid,&temp2);
+
 	if(power_mode==PWRMOD_NORM)
 		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_RESET);
 	if(ret==_OK)
-		write_temperature(temp);
+		write_records(temp,(uint8_t)humid,temp2);
 }
 
 //-------------------------------------------------------------------------
@@ -106,6 +147,7 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 	int16_t min_temp=900,max_temp=-900,cur_temp;
 	uint32_t min_time,max_time;
 	uint32_t min_temp_tm,max_temp_tm;
+	uint8_t min_humd=100,max_humd=0;
 	uint16_t rec_num,xp,yp;
 	date_time_t stime;
 	char info[80];
@@ -119,6 +161,7 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 	rec_num=records->rec_num;
 	//find limits
 	for(int ii=0; ii<rec_num; ii++){
+		//DS temp
 		if(records->rec[ii].temp<min_temp){
 			min_temp = records->rec[ii].temp;
 			min_temp_tm = records->rec[ii].time;
@@ -126,6 +169,18 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 		if(records->rec[ii].temp>max_temp){
 			max_temp = records->rec[ii].temp;
 			max_temp_tm = records->rec[ii].time;
+		}
+		//DHT11
+		if(records->rec[ii].humid>0){
+			if(records->rec[ii].temp2<min_temp)
+				min_temp = records->rec[ii].temp2;
+			if(records->rec[ii].temp2>max_temp)
+				max_temp = records->rec[ii].temp2;
+
+			if(records->rec[ii].humid<min_humd)
+				min_humd = records->rec[ii].humid;
+			if(records->rec[ii].humid>max_humd)
+				max_humd = records->rec[ii].humid;
 		}
 	}
 	min_time=records->rec[0].time;
@@ -135,18 +190,35 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 	//print info
 	epoch_to_date_time(&stime,min_temp_tm);
 	sprintf(info,"min:%d %d:%d",min_temp,stime.hour,stime.minute);
-	LCD_DisplayString(60,112,info,&Font8,graph_col,WHITE);
+	LCD_DisplayString(60,110,info,&Font8,graph_col,WHITE);
 	epoch_to_date_time(&stime,max_temp_tm);
 	sprintf(info,"max:%d %d:%d",max_temp,stime.hour,stime.minute);
 	LCD_DisplayString(60,120,info,&Font8,graph_col,WHITE);
-	sprintf(info,"%d",cur_temp);
-	LCD_DisplayString(135,112,info,&Font12,graph_col,RED);
 
-	//print graph
+	sprintf(info,"%d-%d",min_humd,max_humd);
+	LCD_DisplayString(130,120,info,&Font8,graph_col,CYAN);
+
+	sprintf(info,"%d",cur_temp);
+	LCD_DisplayString(130,108,info,&Font12,graph_col,RED);
+
+
 	for(int ii=0; ii<rec_num; ii++){
-		xp = find_screen_pos(min_time,max_time,records->rec[ii].time,1,LCD_WIDTH-1);
+		xp = find_screen_pos(min_time,max_time,records->rec[ii].time,1,LCD_WIDTH-2);
+
+		//print graph DHT11
+		if(records->rec[ii].humid>0){
+			//print graph DHT11 temp
+			yp = find_screen_pos(min_temp-10,max_temp+10,records->rec[ii].temp2,LCD_HEIGHT-22,1);
+			LCD_SetPointlColor(xp,yp,YELLOW);
+			//print graph DHT11 humid
+			yp = find_screen_pos(min_humd-10,max_humd+10,records->rec[ii].humid,LCD_HEIGHT-22,1);
+			LCD_SetPointlColor(xp,yp,CYAN);
+		}
+
+		//print graph DS temp
 		yp = find_screen_pos(min_temp-10,max_temp+10,records->rec[ii].temp,LCD_HEIGHT-22,1);
-		LCD_SetPointlColor(xp,yp,YELLOW);
+		LCD_SetPointlColor(xp,yp,RED);
+
 	}
 
 }
@@ -174,7 +246,7 @@ static void LCD_update_time(COLOR col){
 	char *date;
 	date = get_time_string();
 	if(graph_on){
-		LCD_DisplayString(1,112,date,&Font12,graph_col,GREEN);
+		LCD_DisplayString(1,114,date,&Font12,graph_col,GREEN);
 	}
 	else{
 		LCD_DisplayString(5,95,date,&Font20,col,GREEN);
@@ -184,18 +256,31 @@ static void LCD_update_time(COLOR col){
 //-------------------------------------------------------------------------
 static void LCD_info_screen(void){
 	int ret;
-	float temp;
-	char temp_str[5];
+	float temp,humid,temp2;
+	char temp_str[5],temp2_str[5],humid_str[3];
 	char *date_buf;
 	//get temper
 	ret=get_temperature(&temp);
 	if(ret==_OK)
-		sprintf(temp_str,"%04.1f",temp);
+		sprintf(temp_str,"%.1f",temp);
 	else
 		sprintf(temp_str,"--.-");
+	//get humidity
+	ret=get_humidity(&humid,&temp2);
+	if(ret==_OK){
+		sprintf(temp2_str,"%.1f",temp2);
+		sprintf(humid_str,"%d",(uint8_t)humid);
+	}
+	else {
+		sprintf(temp2_str,"--.-");
+		sprintf(humid_str,"--");
+	}
+
 	//draw screen
 	LCD_DisplayString(5,5,"Temperature",&Font12,LCD_BACKGROUND,YELLOW);
-	LCD_DisplayString(5,20,temp_str,&Font24,LCD_BACKGROUND,RED);
+	LCD_DisplayString(5,22,temp_str,&Font20,LCD_BACKGROUND,RED);
+	LCD_DisplayString(90,22,humid_str,&Font20,LCD_BACKGROUND,CYAN);
+	LCD_DisplayString(90,5,temp2_str,&Font12,LCD_BACKGROUND,CYAN);
 	LCD_DisplayString(5,45,"Date",&Font12,LCD_BACKGROUND,YELLOW);
 	date_buf = get_day_string();
 	LCD_DisplayString(50,45,date_buf,&Font12,LCD_BACKGROUND,WHITE);
@@ -206,9 +291,9 @@ static void LCD_info_screen(void){
 	LCD_DisplayString(5,95,date_buf,&Font20,BLUE,GREEN);
 	//alarms
 	if(alrm1_en)
-		LCD_DisplayString(140,5,"A1",&Font12,LCD_BACKGROUND,YELLOW);
+		LCD_DisplayString(145,5,"A1",&Font12,LCD_BACKGROUND,YELLOW);
 	if(alrm2_en)
-		LCD_DisplayString(140,20,"A2",&Font12,LCD_BACKGROUND,YELLOW);
+		LCD_DisplayString(145,20,"A2",&Font12,LCD_BACKGROUND,YELLOW);
 }
 
 //-------------------------------------------------------------------------
@@ -447,7 +532,8 @@ void main_init(void){
 	LCD_Init(D2U_L2R);
 	LCD_Demo();
 	init_console();
-	update_temperature();
+	init_dht11();
+	update_sensors();
 }
 
 
@@ -459,7 +545,7 @@ void main_loop(void){
 
 	if(wakeup_req){ //1min WakeUp Timer for get and save temperature!
 		//beep(500,50);
-		update_temperature();
+		update_sensors();
 		if((!graph_on) && (!menu_on))
 			play_mode_old=-1; //create screen update
 		wakeup_req=0;

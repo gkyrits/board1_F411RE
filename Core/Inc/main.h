@@ -84,6 +84,8 @@ void SystemClock_Config(void);
 #define USART_RX_GPIO_Port GPIOA
 #define BAT_CN_Pin GPIO_PIN_4
 #define BAT_CN_GPIO_Port GPIOC
+#define DHT11_Pin GPIO_PIN_5
+#define DHT11_GPIO_Port GPIOC
 #define SPI4_CS1_Pin GPIO_PIN_0
 #define SPI4_CS1_GPIO_Port GPIOB
 #define SPI4_CS2_Pin GPIO_PIN_1

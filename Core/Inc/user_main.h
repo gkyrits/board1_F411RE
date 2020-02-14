@@ -29,6 +29,8 @@ extern void button2_irq(void);
 
 extern void beep(uint16_t freq, uint16_t timems);
 
+extern int read_humidity(float *humid, float *temp);
+
 extern void LCD_records_graph(uint16_t col);
 
 

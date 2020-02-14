@@ -39,6 +39,8 @@ extern int LCD_load_next_image(void);
 typedef struct time_rec{
 	uint32_t time;
 	int16_t  temp;
+	int16_t  temp2;
+	int8_t   humid;
 }TIME_REC;
 
 //24Hours records

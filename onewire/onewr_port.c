@@ -26,6 +26,11 @@ void Delay_micro(uint32_t micros){
 	while ((DWT->CYCCNT - start) < micros);
 }
 
+uint32_t Get_micros(void){
+	uint32_t micro_ticks = HAL_RCC_GetHCLKFreq() / 1000000;
+	return DWT->CYCCNT / micro_ticks;
+}
+
 
 void GPIO_SetPinLow(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin){
 	HAL_GPIO_WritePin(GPIOx,GPIO_Pin,GPIO_PIN_RESET);
