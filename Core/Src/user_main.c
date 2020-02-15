@@ -83,11 +83,29 @@ static int get_humidity(float *humid, float *temp){
 //-------------------------------------------------------------------------
 // UPDATE TEMPERATURE
 //-------------------------------------------------------------------------
-#define RECORD_FILE "records.txt"
+//#define RECORD_FILE "records.txt"
+static int record_filename(char *fname){
+	date_time_t date_time;
+	int ret;
+
+	ret=get_datetime_struct(&date_time);
+	if(ret!=_OK)
+		return ret;
+	sprintf(fname,"rec%02d%02d.txt",date_time.year,date_time.month);
+	return _OK;
+}
+
+//-------------------------------------------------------------------------
 static void write_records(float temp, uint8_t humid, float temp2){
 	char rec_line[80];
+	char fname[20];
+	int ret;
 	int16_t temp16,temp16_2;
 	uint32_t time;
+
+	ret=record_filename(fname);
+	if(ret!=_OK)
+		return;
 
 	temp16   = temp*10;
 	temp16_2 = temp2*10;
@@ -95,7 +113,7 @@ static void write_records(float temp, uint8_t humid, float temp2){
 	sprintf(rec_line,"%8X %03d %02d %03d",time,temp16,humid,temp16_2);
 
 	printf("rec:[%s]\n",rec_line);
-	write_record_line(RECORD_FILE,rec_line);
+	write_record_line(fname,rec_line);
 }
 
 //-------------------------------------------------------------------------
@@ -107,14 +125,19 @@ static void update_sensors(void){
 		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_SET);
 
 	//get temper
-	for(int ii=0; ii<3; ii++){
+	for(int ii=0; ii<2; ii++){
 		test_onewire();
 		ret=get_temperature(&temp);
 		if(ret==_OK)
 			break;
 	}
 	//get humidity
-	read_humidity(&humid,&temp2);
+	for(int ii=0; ii<2; ii++){
+		ret=read_humidity(&humid,&temp2);
+		if(ret==_OK)
+			break;
+		HAL_Delay(1000);
+	}
 
 	if(power_mode==PWRMOD_NORM)
 		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_RESET);
@@ -226,10 +249,15 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 
 //-------------------------------------------------------------------------
 void LCD_records_graph(uint16_t col){
+	char fname[20];
 	DAY_RECS *records;
-	int err;
+	int ret,err;
 
-	records = read_record_block(RECORD_FILE,&err);
+	ret=record_filename(fname);
+	if(ret!=_OK)
+		return;
+
+	records = read_record_block(fname,&err);
 	if(!records)
 		return;
 
@@ -531,6 +559,7 @@ void main_init(void){
 	HAL_TIM_PWM_Start(&htim11,TIM_CHANNEL_1); //LCD PWM
 	LCD_Init(D2U_L2R);
 	LCD_Demo();
+	HAL_Delay(100);
 	init_console();
 	init_dht11();
 	update_sensors();

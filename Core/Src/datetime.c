@@ -138,6 +138,30 @@ void init_datetime(void){
 }
 
 //-----------------------------------------------------------
+int get_datetime_struct(date_time_t* date_time){
+	RTC_TimeTypeDef sTime;
+	RTC_DateTypeDef sDate;
+
+	 if (HAL_RTC_GetTime(&hrtc,&sTime,RTC_FORMAT_BIN) != HAL_OK){
+		 printf("fail read time!");
+		 return _ERR;
+	 }
+	 if (HAL_RTC_GetDate(&hrtc,&sDate,RTC_FORMAT_BIN) != HAL_OK){
+		 printf("fail read date!");
+		 return _ERR;
+	 }
+
+	 date_time->year = sDate.Year;
+	 date_time->month = sDate.Month;
+	 date_time->day = sDate.Date;
+	 date_time->hour = sTime.Hours;
+	 date_time->minute = sTime.Minutes;
+	 date_time->second = sTime.Seconds;
+
+	 return _OK;
+}
+
+//-----------------------------------------------------------
 char* get_datetime_string(void){
 	RTC_TimeTypeDef sTime;
 	RTC_DateTypeDef sDate;
