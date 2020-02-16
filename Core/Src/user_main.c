@@ -231,8 +231,8 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 		//print graph DHT11
 		if(records->rec[ii].humid>0){
 			//print graph DHT11 temp
-			yp = find_screen_pos(min_temp-10,max_temp+10,records->rec[ii].temp2,LCD_HEIGHT-22,1);
-			LCD_SetPointlColor(xp,yp,YELLOW);
+			/*yp = find_screen_pos(min_temp-10,max_temp+10,records->rec[ii].temp2,LCD_HEIGHT-22,1);
+			LCD_SetPointlColor(xp,yp,RED);*/
 			//print graph DHT11 humid
 			yp = find_screen_pos(min_humd-10,max_humd+10,records->rec[ii].humid,LCD_HEIGHT-22,1);
 			LCD_SetPointlColor(xp,yp,CYAN);
@@ -240,7 +240,7 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 
 		//print graph DS temp
 		yp = find_screen_pos(min_temp-10,max_temp+10,records->rec[ii].temp,LCD_HEIGHT-22,1);
-		LCD_SetPointlColor(xp,yp,RED);
+		LCD_SetPointlColor(xp,yp,YELLOW);
 
 	}
 
@@ -347,31 +347,98 @@ static void LCD_image_screen(void){
 	}
 }
 
+//----------------------------------------------------------------------------------
+// POWER MODE
+//----------------------------------------------------------------------------------
+
+void set_LCD_backlight(int value){
+	TIM_OC_InitTypeDef sConfig = {0};
+	sConfig.OCMode = TIM_OCMODE_PWM1;
+	sConfig.Pulse = value;
+	sConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
+	sConfig.OCFastMode = TIM_OCFAST_DISABLE;
+	HAL_TIM_PWM_ConfigChannel(&htim11, &sConfig, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim11,TIM_CHANNEL_1);
+}
+
+//----------------------------------------------------------------------------------
+void apply_power_mode(void){
+	switch(power_mode){
+	case PWRMOD_NORM:
+		set_LCD_backlight(101);
+		break;
+	case PWRMOD_LOW:
+		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
+		set_LCD_backlight(10);
+		break;
+	case PWRMOD_STOP:
+		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
+		set_LCD_backlight(0);
+		HAL_PWREx_EnableFlashPowerDown();
+		LCD_Sleep(1);
+		HAL_Delay(100);
+		HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON,PWR_STOPENTRY_WFI);
+		SystemClock_Config();
+		HAL_PWREx_DisableFlashPowerDown();
+		LCD_Sleep(0);
+		power_mode=PWRMOD_LOW; //...
+		if(power_mode==PWRMOD_LOW)
+			set_LCD_backlight(10);
+		else
+			set_LCD_backlight(101);
+		break;
+	}
+}
+
+
 //-------------------------------------------------------------------------
 //MENUS
 //-------------------------------------------------------------------------
-#define MENU1			0
+#define MAIN_MENU			0 //MNU1
+#define POWER_MENU			1 //MNU2
 
+//MAIN_MENU
 #define MNU1_SLIDE_SD		0
 #define MNU1_SLIDE_SD_INF	1
 #define MNU1_SLIDE_INT_INF	2
 #define MNU1_SLIDE_OFF		3
-#define MNU1_TEST_BEEP		4
-#define MNU1_EXIT			5
+#define MNU1_POWER_MODE		4
+#define MNU1_TEST_BEEP		5
+#define MNU1_EXIT			6
+
+//POWER_MENU
+#define MNU2_PWR_NORM		0
+#define MNU2_PWR_LOW		1
+#define MNU2_PWR_STOP		2
+#define MNU2_EXIT			3
 
 //-------------------------------------------------------------------------
-static void create_menu1(){
-	menu_id=MENU1;
+static void create_main_menu(){
+	menu_id=MAIN_MENU;
 	add_mnu_option(menu_id,"Slide sd");
 	add_mnu_option(menu_id,"Slide sd/info");
 	add_mnu_option(menu_id,"Slide int/info");
 	add_mnu_option(menu_id,"Slide off");
+	add_mnu_option(menu_id,"Power mode");
 	add_mnu_option(menu_id,"Beeper Test");
 	add_mnu_option(menu_id,"Exit");
-	set_mnu_item(menu_id,0);
+	set_mnu_item(menu_id,MNU1_SLIDE_SD);
 	LCD_Clear(BLUE);
 	show_menu(menu_id,BLUE);
 }
+
+//-------------------------------------------------------------------------
+static void create_power_menu(){
+	menu_id=POWER_MENU;
+	add_mnu_option(menu_id,"Normal");
+	add_mnu_option(menu_id,"Low Power");
+	add_mnu_option(menu_id,"Stop Mode");
+	add_mnu_option(menu_id,"Exit");
+	set_mnu_item(menu_id,MNU2_PWR_NORM);
+	LCD_Clear(BLUE);
+	show_menu(menu_id,BLUE);
+}
+
 
 //-------------------------------------------------------------------------
 static void menu_exit(void){
@@ -383,7 +450,7 @@ static void menu_exit(void){
 static void menu_action(int mnu_id, int item_id){
 	int err;
 	switch(mnu_id){
-	case MENU1:
+	case MAIN_MENU:
 		switch(item_id){
 		case MNU1_SLIDE_SD:
 			play_mode = PLYMOD_IMG;
@@ -407,6 +474,9 @@ static void menu_action(int mnu_id, int item_id){
 			internal_img = 0;
 			menu_exit();
 			break;
+		case MNU1_POWER_MODE:
+			create_power_menu();
+			break;
 		case MNU1_EXIT:
 			menu_exit();
 			break;
@@ -417,7 +487,32 @@ static void menu_action(int mnu_id, int item_id){
 			menu_exit();
 			break;
 		}
-		break; //MENU_1
+		break; //MAIN_MENU
+	case POWER_MENU:
+		switch(item_id){
+		case MNU2_PWR_NORM:
+			power_mode=PWRMOD_NORM;
+			menu_exit();
+			apply_power_mode();
+			break;
+		case MNU2_PWR_LOW:
+			power_mode=PWRMOD_LOW;
+			menu_exit();
+			apply_power_mode();
+			break;
+		case MNU2_PWR_STOP:
+			power_mode=PWRMOD_STOP;
+			menu_exit();
+			apply_power_mode();
+			break;
+		case MNU2_EXIT:
+			delete_menu(POWER_MENU);
+			menu_id=MAIN_MENU;
+			LCD_Clear(BLUE);
+			show_menu(menu_id,BLUE);
+			break;
+		}
+		break; //POWER_MENU
 	}
 	update_options();
 }
@@ -438,7 +533,7 @@ static void menu_one_sec(void){
 static void button_menu(void){
 	mnu_tmout_cnt=0;
 	if(!menu_on){
-		create_menu1();
+		create_main_menu();
 		menu_on=1;
 	}
 	else{
@@ -523,6 +618,7 @@ static void apply_options(void){
 	internal_img = options.intrn_img;
 	alrm1_en=options.alrm1_en;
 	alrm2_en=options.alrm2_en;
+	power_mode = options.pwr_mod;
 
 	//init images
 	if((play_mode==PLYMOD_IMG) || (play_mode==PLYMOD_IMG_INF)){
@@ -537,6 +633,9 @@ static void apply_options(void){
 		enable_alarm(1,1);
 	if(alrm2_en)
 		enable_alarm(2,1);
+
+	//power mode
+	apply_power_mode();
 }
 
 //-------------------------------------------------------------------------
@@ -545,6 +644,7 @@ void update_options(void){
 	options.intrn_img = internal_img;
 	options.alrm1_en = alrm1_en;
 	options.alrm2_en = alrm2_en;
+	options.pwr_mod  = power_mode;
 
 	write_options(&options);
 }

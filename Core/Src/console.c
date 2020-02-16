@@ -386,17 +386,6 @@ static void beep_demo_cmd(void){
 	cli_print(CRLN PROMPT);
 }
 
-//----------------------------------------------------------------------------------
-static void set_LCD_backlight(int value){
-	TIM_OC_InitTypeDef sConfig = {0};
-	sConfig.OCMode = TIM_OCMODE_PWM1;
-	sConfig.Pulse = value;
-	sConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
-	sConfig.OCFastMode = TIM_OCFAST_DISABLE;
-	HAL_TIM_PWM_ConfigChannel(&htim11, &sConfig, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim11,TIM_CHANNEL_1);
-}
-
 
 //----------------------------------------------------------------------------------
 static void lcd_backlit_cmd(void){
@@ -605,6 +594,7 @@ static void play_images_cmd(void){
 	cli_print(CRLN);
 }
 
+
 //----------------------------------------------------------------------------------
 static void set_power_cmd(void){
 
@@ -612,16 +602,16 @@ static void set_power_cmd(void){
 		goto help;
 
 	if(!strcmp(argv[1],"norm")){
-		set_LCD_backlight(101);
+		/*set_LCD_backlight(101);*/
 		power_mode=PWRMOD_NORM;
 	}
 	else if(!strcmp(argv[1],"low")){
-		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
-		set_LCD_backlight(10);
+		/*HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
+		set_LCD_backlight(10);*/
 		power_mode=PWRMOD_LOW;
 	}
 	else if(!strcmp(argv[1],"stop")){
-		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
+		/*HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
 		set_LCD_backlight(0);
 		//HAL_GPIO_WritePin(LCD_RST_Pin_Port, LCD_RST_Pin,GPIO_PIN_RESET);
 		//power_mode=PWRMOD_STOP;
@@ -635,10 +625,14 @@ static void set_power_cmd(void){
 		if(power_mode==PWRMOD_LOW)
 			set_LCD_backlight(10);
 		else
-			set_LCD_backlight(101);
+			set_LCD_backlight(101);*/
+		power_mode=PWRMOD_STOP;
 	}
 	else
 		goto help;
+
+	apply_power_mode();
+	update_options();
 
 	cli_print(CRLN "ok!");
 	cli_print(CRLN);

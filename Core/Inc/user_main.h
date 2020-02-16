@@ -16,6 +16,7 @@ typedef struct options{
 	uint8_t alrm1_en,alrm2_en;
 	uint8_t play_mode;
 	uint8_t intrn_img;
+	uint8_t pwr_mod;
 }PACKED OPTIONS;  //program options
 
 extern OPTIONS options;
@@ -27,11 +28,11 @@ void update_options(void);
 extern void button1_irq(void);
 extern void button2_irq(void);
 
+extern void set_LCD_backlight(int value);
 extern void beep(uint16_t freq, uint16_t timems);
-
 extern int read_humidity(float *humid, float *temp);
-
 extern void LCD_records_graph(uint16_t col);
+extern void apply_power_mode(void);
 
 
 #define PLYMOD_INF 		0
