@@ -332,12 +332,9 @@ int write_record_line(const char *name ,char *line){
 }
 
 
-//-------------------------------------------------------------------------
-
-#define DAY_SECS	 (24*60*60)
 
 //-------------------------------------------------------------------------
-static void parse_record_line(char *line ,DAY_RECS *records){
+static uint32_t parse_record_line(char *line ,DAY_RECS *records){
 	int  argc;
 	char *argv[4];
 	char *arg;
@@ -359,11 +356,11 @@ static void parse_record_line(char *line ,DAY_RECS *records){
 
 	//check args
 	if(argc<2)
-		return;
+		return 0;
 	if(strlen(argv[0])!=8)
-		return;
+		return 0;
 	if(strlen(argv[1])<3)
-		return;
+		return 0;
 	sscanf(argv[0],"%X",&time);
 	temp=atoi(argv[1]);
 	if(argc>3){
@@ -374,11 +371,11 @@ static void parse_record_line(char *line ,DAY_RECS *records){
 	start_time = records->time;
 
 	if((temp==0) || (time==0))
-		return;
+		return time;
 	if((start_time-time)>DAY_SECS)
-		return;
+		return time;
 	if(records->rec_num>=DAY_REC_NUM)
-		return;
+		return time;
 
 	//printf("rec[%d]  time=%X  temp=%d temp2=%d humid=%d\n",records->rec_num,time,temp,temp2,humid);
 
@@ -387,11 +384,13 @@ static void parse_record_line(char *line ,DAY_RECS *records){
 	records->rec[records->rec_num].humid=humid;
 	records->rec[records->rec_num].temp2=temp2;
 	records->rec_num++;
+
+	return time;
 }
 
 
 //-------------------------------------------------------------------------
-DAY_RECS *read_record_block(const char *name , int *err){
+DAY_RECS *read_record_block(const char *name , int *err, int offs_s){
 	FIL MyFile;
 	FRESULT ret;
 	TCHAR linebuff[160],*retbuff;
@@ -425,13 +424,16 @@ DAY_RECS *read_record_block(const char *name , int *err){
 	}
 	records->rec_num=0;
 
-	start_time=get_datetime_epoch();
+	start_time=get_datetime_epoch()-offs_s;
 	records->time=start_time;
 	for(;;){
+		uint32_t time;
 		retbuff = f_gets(linebuff, sizeof(workbuff), &MyFile);
 		if(retbuff==NULL)
 			break;
-		parse_record_line(linebuff,records);
+		time=parse_record_line(linebuff,records);
+		if(time>start_time)
+			break;
 		if(records->rec_num>=DAY_REC_NUM)
 			break;
 	}

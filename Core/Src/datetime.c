@@ -264,6 +264,15 @@ char* get_time_string(void){
 	 return datetime_buff;
 }
 
+//-------------------------------------------------------------------------
+char* get_offs_date_string(int offs_s){
+	date_time_t date_time;
+	U32 time = get_datetime_epoch() - offs_s;
+	epoch_to_date_time(&date_time,time);
+	sprintf(datetime_buff,"%02d/%02d/%d",date_time.day,date_time.month,date_time.year);
+	return datetime_buff;
+}
+
 
 //-----------------------------------------------------------
 int set_time_args(char *hour, char *min, char *sec){

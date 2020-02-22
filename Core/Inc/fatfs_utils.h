@@ -27,7 +27,8 @@ extern int get_fatfs_info(uint32_t *total_sect, uint32_t *free_sect, char *name)
 #define ERR_MEMORY 		  2
 #define ERR_FS_READ       3
 #define ERR_FS_WRITE      4
-#define ERR_NO_IMGS		  5
+#define ERR_FS_EOF		  5
+#define ERR_NO_IMGS		  6
 
 extern char* read_image_error(int err);
 extern int read_image_list(int *err);
@@ -35,6 +36,7 @@ extern int LCD_load_next_image(void);
 
 //-------------------------------------------------------------------------
 #define DAY_REC_NUM  (24*60)
+#define DAY_SECS	 (24*60*60)
 
 typedef struct time_rec{
 	uint32_t time;
@@ -52,7 +54,7 @@ typedef struct day_recs{
 
 
 extern int write_record_line(const char *name ,char *line);
-extern DAY_RECS *read_record_block(const char *name , int *err);
+extern DAY_RECS *read_record_block(const char *name , int *err, int offs_s);
 
 
 

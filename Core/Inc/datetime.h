@@ -30,6 +30,8 @@ char* get_datetime_string(void);
 char* get_day_string(void);
 char* get_date_string(void);
 char* get_time_string(void);
+char* get_offs_date_string(int offs_s);
+
 
 int set_time_args(char *hour, char *min, char *sec);
 int set_date_args(char *day, char *date, char *month, char *year);

@@ -42,6 +42,7 @@ static int mnu_tmout_cnt=0;
 
 static int graph_on=0;
 static COLOR graph_col;
+static int grph_offs=0;
 
 OPTIONS options;
 
@@ -60,7 +61,7 @@ int read_humidity(float *humid, float *temp){
 
 	ret=DHT11_Read(&dev);
 	if(ret!=DHT11_SUCCESS){
-		printf("Error read DHT11\n!");
+		printf("Error DHT11:%s\n",DHT11_error_str(ret));
 		return _ERR;
 	}
 
@@ -74,10 +75,7 @@ static int get_humidity(float *humid, float *temp){
 
 	*humid = dev.humidity;
 	*temp  = dev.temparature;
-	if(dev.err!=DHT11_SUCCESS)
-		return _ERR;
-	else
-		return _OK;
+	return dev.err;
 }
 
 //-------------------------------------------------------------------------
@@ -132,12 +130,13 @@ static void update_sensors(void){
 			break;
 	}
 	//get humidity
-	for(int ii=0; ii<2; ii++){
+	ret=read_humidity(&humid,&temp2);
+	/*for(int ii=0; ii<2; ii++){
 		ret=read_humidity(&humid,&temp2);
 		if(ret==_OK)
 			break;
 		HAL_Delay(1000);
-	}
+	}*/
 
 	if(power_mode==PWRMOD_NORM)
 		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_RESET);
@@ -170,11 +169,12 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 	int16_t min_temp=900,max_temp=-900,cur_temp;
 	uint32_t min_time,max_time;
 	uint32_t min_temp_tm,max_temp_tm;
-	uint8_t min_humd=100,max_humd=0;
+	uint8_t min_humd=100,max_humd=0,cur_humd;
 	uint16_t rec_num,xp,yp;
 	date_time_t stime;
 	char info[80];
 
+	printf("%s()\n",__FUNCTION__);
 
 	graph_on=1;
 	graph_col = col;
@@ -209,6 +209,7 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 	min_time=records->rec[0].time;
 	max_time=records->rec[rec_num-1].time;
 	cur_temp=records->rec[rec_num-1].temp;
+	cur_humd=records->rec[rec_num-1].humid;
 
 	//print info
 	epoch_to_date_time(&stime,min_temp_tm);
@@ -221,8 +222,8 @@ static void LCD_graph_screen(COLOR col, DAY_RECS *records){
 	sprintf(info,"%d-%d",min_humd,max_humd);
 	LCD_DisplayString(130,120,info,&Font8,graph_col,CYAN);
 
-	sprintf(info,"%d",cur_temp);
-	LCD_DisplayString(130,108,info,&Font12,graph_col,RED);
+	sprintf(info,"%d %d",cur_temp,cur_humd);
+	LCD_DisplayString(130,110,info,&Font8,graph_col,RED);
 
 
 	for(int ii=0; ii<rec_num; ii++){
@@ -253,13 +254,42 @@ void LCD_records_graph(uint16_t col){
 	DAY_RECS *records;
 	int ret,err;
 
+	grph_offs=0;
 	ret=record_filename(fname);
 	if(ret!=_OK)
 		return;
 
-	records = read_record_block(fname,&err);
+	records = read_record_block(fname,&err,0);
 	if(!records)
 		return;
+
+	LCD_graph_screen(col,records);
+
+	free(records);
+}
+
+//-------------------------------------------------------------------------
+void LCD_records_graph_next(uint16_t col){
+	char fname[20];
+	DAY_RECS *records;
+	int ret,err;
+
+	ret=record_filename(fname);
+	if(ret!=_OK)
+		return;
+
+	grph_offs += DAY_SECS;
+	printf("%s() grph_offs=%d\n",__FUNCTION__,grph_offs);
+	records = read_record_block(fname,&err,grph_offs);
+	if(!records){
+		LCD_records_graph(col);
+		return;
+	}
+	if(records->rec_num==0){
+		free(records);
+		LCD_records_graph(col);
+		return;
+	}
 
 	LCD_graph_screen(col,records);
 
@@ -274,7 +304,12 @@ static void LCD_update_time(COLOR col){
 	char *date;
 	date = get_time_string();
 	if(graph_on){
-		LCD_DisplayString(1,114,date,&Font12,graph_col,GREEN);
+		if(!grph_offs)
+			LCD_DisplayString(1,114,date,&Font12,graph_col,GREEN);
+		else{
+			date = get_offs_date_string(grph_offs);
+			LCD_DisplayString(1,114,date,&Font12,graph_col,GREEN);
+		}
 	}
 	else{
 		LCD_DisplayString(5,95,date,&Font20,col,GREEN);
@@ -295,14 +330,12 @@ static void LCD_info_screen(void){
 		sprintf(temp_str,"--.-");
 	//get humidity
 	ret=get_humidity(&humid,&temp2);
-	if(ret==_OK){
-		sprintf(temp2_str,"%.1f",temp2);
-		sprintf(humid_str,"%d",(uint8_t)humid);
-	}
-	else {
-		sprintf(temp2_str,"--.-");
-		sprintf(humid_str,"--");
-	}
+	sprintf(temp2_str,"%.1f",temp2);
+	sprintf(humid_str,"%d",(uint8_t)humid);
+	if(ret==DHT11_ERROR_TIMEOUT)
+		strcat(temp2_str," t");
+	else if(ret==DHT11_ERROR_CHECKSUM)
+		strcat(temp2_str," s");
 
 	//draw screen
 	LCD_DisplayString(5,5,"Temperature",&Font12,LCD_BACKGROUND,YELLOW);
@@ -531,6 +564,10 @@ static void menu_one_sec(void){
 //BUTTONS
 //-------------------------------------------------------------------------
 static void button_menu(void){
+	if(graph_on){
+		LCD_records_graph_next(BLUE);
+		return;
+	}
 	mnu_tmout_cnt=0;
 	if(!menu_on){
 		create_main_menu();
