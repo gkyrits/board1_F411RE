@@ -602,30 +602,12 @@ static void set_power_cmd(void){
 		goto help;
 
 	if(!strcmp(argv[1],"norm")){
-		/*set_LCD_backlight(101);*/
 		power_mode=PWRMOD_NORM;
 	}
 	else if(!strcmp(argv[1],"low")){
-		/*HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
-		set_LCD_backlight(10);*/
 		power_mode=PWRMOD_LOW;
 	}
 	else if(!strcmp(argv[1],"stop")){
-		/*HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
-		set_LCD_backlight(0);
-		//HAL_GPIO_WritePin(LCD_RST_Pin_Port, LCD_RST_Pin,GPIO_PIN_RESET);
-		//power_mode=PWRMOD_STOP;
-		HAL_PWREx_EnableFlashPowerDown();
-		LCD_Sleep(1);
-		HAL_Delay(100);
-		HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON,PWR_STOPENTRY_WFI);
-		SystemClock_Config();
-		HAL_PWREx_DisableFlashPowerDown();
-		LCD_Sleep(0);
-		if(power_mode==PWRMOD_LOW)
-			set_LCD_backlight(10);
-		else
-			set_LCD_backlight(101);*/
 		power_mode=PWRMOD_STOP;
 	}
 	else

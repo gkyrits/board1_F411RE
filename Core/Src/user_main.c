@@ -44,6 +44,8 @@ static int graph_on=0;
 static COLOR graph_col;
 static int grph_offs=0;
 
+int lcd_wake=0;
+
 OPTIONS options;
 
 //-------------------------------------------------------------------------
@@ -687,6 +689,39 @@ void update_options(void){
 }
 
 //-------------------------------------------------------------------------
+static void handle_backlight(int but){
+	static uint8_t cnt=0;
+	if(power_mode==PWRMOD_LOW){
+		if(but){
+			set_LCD_backlight(80);
+			cnt=4;
+			return;
+		}
+		else{
+			if(cnt){
+				cnt--;
+				if(!cnt){
+					set_LCD_backlight(10);
+					lcd_wake=0;
+				}
+			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------
+static int lcd_iswakeup(void){
+	if(power_mode==PWRMOD_NORM)
+		return 1;
+	if(!lcd_wake){
+		lcd_wake=1;
+		return 0;
+	}
+	return 1;
+}
+
+
+//-------------------------------------------------------------------------
 //MAIN
 //-------------------------------------------------------------------------
 void main_init(void){
@@ -704,7 +739,7 @@ void main_init(void){
 
 
 void main_loop(void){
-	static int cnt = 0;
+	static uint16_t cnt = 0;
 	if(power_mode==PWRMOD_NORM)
 		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
 	HAL_Delay(100);
@@ -734,21 +769,28 @@ void main_loop(void){
 		parse_cmd();
 
 	if(but1_req){
-		beep(3000,100); //3KHz
-		button_select();
+		if(lcd_iswakeup()){
+			beep(3000,100); //3KHz
+			button_select();
+		}
+		handle_backlight(1);
+		HAL_Delay(100);
 		but1_req=0;
 	}
 
 	if(but2_req){
-		beep(1000,100); //1KHz
-		button_menu();
+		if(lcd_iswakeup()){
+			beep(1000,100); //1KHz
+			button_menu();
+		}
+		handle_backlight(1);
+		HAL_Delay(100);
 		but2_req=0;
 	}
 
 	if(!(cnt%10) && (cnt>0)){
 		one_sec_time_event();
-		cnt=0;
-		return;
+		handle_backlight(0);
 	}
 
 	cnt++;

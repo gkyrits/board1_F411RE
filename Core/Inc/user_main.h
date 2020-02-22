@@ -46,9 +46,11 @@ extern int alrm1_en,alrm2_en;
 
 extern int wakeup_req; //1min WakeUp Timer for get and save temperature!
 
-#define PWRMOD_NORM		0
-#define PWRMOD_LOW		1
-#define PWRMOD_STOP		2
+#define PWRMOD_NORM		 0
+#define PWRMOD_LOW		 1
+#define PWRMOD_STOP		 2
+#define PWRMOD_STOP_WRK  3
+
 extern int power_mode;
 
 
