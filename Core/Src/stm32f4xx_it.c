@@ -264,6 +264,10 @@ void USART2_IRQHandler(void)
 	  HAL_StatusTypeDef status = HAL_UART_Receive(&huart2, (uint8_t*)&ch,1,1);
 	  if(status==HAL_OK)
 		  console_rx_char(ch);
+	  else if(status==HAL_BUSY){
+		  __HAL_UART_DISABLE(&huart2);
+		  __HAL_UART_ENABLE(&huart2);
+	  }
   }
   /* USER CODE END USART2_IRQn 1 */
 }

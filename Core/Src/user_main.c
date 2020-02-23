@@ -123,6 +123,8 @@ static void update_sensors(void){
 
 	if(power_mode==PWRMOD_NORM)
 		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_SET);
+	if(power_mode==PWRMOD_STOP)
+		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_SET);
 
 	//get temper
 	for(int ii=0; ii<2; ii++){
@@ -142,6 +144,8 @@ static void update_sensors(void){
 
 	if(power_mode==PWRMOD_NORM)
 		HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin,GPIO_PIN_RESET);
+	if(power_mode==PWRMOD_STOP)
+		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin,GPIO_PIN_RESET);
 	if(ret==_OK)
 		write_records(temp,(uint8_t)humid,temp2);
 }
@@ -415,12 +419,14 @@ void apply_power_mode(void){
 		HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON,PWR_STOPENTRY_WFI);
 		SystemClock_Config();
 		HAL_PWREx_DisableFlashPowerDown();
+		/*
 		LCD_Sleep(0);
 		power_mode=PWRMOD_LOW; //...
 		if(power_mode==PWRMOD_LOW)
 			set_LCD_backlight(10);
 		else
 			set_LCD_backlight(101);
+		*/
 		break;
 	}
 }
@@ -672,9 +678,6 @@ static void apply_options(void){
 		enable_alarm(1,1);
 	if(alrm2_en)
 		enable_alarm(2,1);
-
-	//power mode
-	apply_power_mode();
 }
 
 //-------------------------------------------------------------------------
@@ -729,33 +732,53 @@ void main_init(void){
 	init_datetime();
 	apply_options();
 	HAL_TIM_PWM_Start(&htim11,TIM_CHANNEL_1); //LCD PWM
+	set_LCD_backlight(60);
 	LCD_Init(D2U_L2R);
 	LCD_Demo();
-	HAL_Delay(100);
+	//HAL_Delay(100);
 	init_console();
 	init_dht11();
 	update_sensors();
+	//power mode
+	apply_power_mode();
 }
 
 
-void main_loop(void){
-	static uint16_t cnt = 0;
-	if(power_mode==PWRMOD_NORM)
-		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
-	HAL_Delay(100);
+//-------------------------------------------------------------------------
+void stop_mode_loop(int cnt){
+	static uint8_t stop_cnt = 0;
+	static int sleep=1;
 
 	if(wakeup_req){ //1min WakeUp Timer for get and save temperature!
-		//beep(500,50);
+		cnt=0;
 		update_sensors();
-		if((!graph_on) && (!menu_on))
-			play_mode_old=-1; //create screen update
 		wakeup_req=0;
+		if(!alrm1_req && !alrm2_req && !but1_req && !but2_req && !menu_on && !graph_on && sleep){
+			HAL_PWREx_EnableFlashPowerDown();
+			HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON,PWR_STOPENTRY_WFI);
+			SystemClock_Config();
+			HAL_PWREx_DisableFlashPowerDown();
+			return;
+		}
+	}
+
+	if(but1_req || but2_req){
+		LCD_Sleep(0);
+		set_LCD_backlight(30);
+		if(sleep){
+			//beep(6000,30);
+			LCD_Clear(BLUE);
+			LCD_info_screen();
+			sleep=0;
+		}
+		stop_cnt=0;
 	}
 
 	if(alrm1_req){
 		beep(5000,50);
 		alrm1_req=0;
 	}
+
 	if(alrm2_req){
 		beep(4000,50);
 		HAL_Delay(50);
@@ -765,8 +788,84 @@ void main_loop(void){
 		alrm2_req=0;
 	}
 
-	if(command_req)
-		parse_cmd();
+	if(but1_req){
+		if(lcd_iswakeup()){
+			beep(3000,100); //3KHz
+			button_select();
+		}
+		HAL_Delay(100);
+		but1_req=0;
+	}
+
+	if(but2_req){
+		if(lcd_iswakeup()){
+			beep(1000,100); //1KHz
+			button_menu();
+		}
+		HAL_Delay(100);
+		but2_req=0;
+	}
+
+
+	if(!(cnt%10) && (cnt>0)){
+		one_sec_time_event();
+	}
+
+	if(!(stop_cnt%50) && (stop_cnt>0)){
+		set_LCD_backlight(10);
+	}
+
+	if(!(stop_cnt%100) && (stop_cnt>0)){
+		lcd_wake=0;
+		sleep=1;
+		if(menu_on){
+			delete_all_menu();
+			menu_on=0;
+		}
+		graph_on=0;
+		apply_power_mode();
+	}
+
+	stop_cnt++;
+}
+
+
+//-------------------------------------------------------------------------
+void main_loop(void){
+	static uint16_t cnt = 0;
+
+	if(power_mode==PWRMOD_NORM)
+		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+	HAL_Delay(100);
+	cnt++;
+
+	if(power_mode==PWRMOD_STOP){
+		stop_mode_loop(cnt);
+		return;
+	}
+
+	if(wakeup_req){ //1min WakeUp Timer for get and save temperature!
+		//beep(500,50);
+		update_sensors();
+		if((!graph_on) && (!menu_on))
+			play_mode_old=-1; //create screen update
+		wakeup_req=0;
+	}
+
+
+	if(alrm1_req){
+		beep(5000,50);
+		alrm1_req=0;
+	}
+
+	if(alrm2_req){
+		beep(4000,50);
+		HAL_Delay(50);
+		beep(4000,50);
+		HAL_Delay(50);
+		beep(4000,50);
+		alrm2_req=0;
+	}
 
 	if(but1_req){
 		if(lcd_iswakeup()){
@@ -788,12 +887,14 @@ void main_loop(void){
 		but2_req=0;
 	}
 
+	if(command_req)
+		parse_cmd();
+
 	if(!(cnt%10) && (cnt>0)){
 		one_sec_time_event();
 		handle_backlight(0);
 	}
 
-	cnt++;
 }
 
 
